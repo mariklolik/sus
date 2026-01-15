@@ -1,0 +1,42 @@
+model:
+  name: "Qwen/Qwen2.5-1.5B"
+  use_4bit: false
+  use_lora: true
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+training:
+  num_epochs: 3
+  batch_size: 2
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-5
+  warmup_ratio: 0.1
+  max_length: 256
+  num_trajectories_per_problem: 8
+
+grpo:
+  kl_coef: 0.1
+  gamma: 1.0
+  clip_range: 0.2
+
+tscl:
+  enabled: true
+  strategy_dim: 128
+  lambda_strategy: 1.0
+  lambda_success: 0.0
+  alpha: 0.3
+  only_reward_correct: true
+  pse_model: "all-MiniLM-L6-v2"
+  freeze_pse: true
+  dropout: 0.1
+
+evaluation:
+  eval_steps: 25
+  num_eval_samples: 200
+  compute_diversity_metrics: true
+  k_values: [1, 5, 10]
+
+seeds: [42, 123, 456]
+output_dir: "outputs"
+wandb_project: "tscl-experiments"

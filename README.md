@@ -2,58 +2,74 @@
 
 Official implementation for the paper "SuS: Strategy-aware Surprise for Intrinsic Exploration".
 
+[[Paper]](https://arxiv.org/abs/XXXX.XXXXX) [[Code]](https://github.com/mariklolik/sus)
+
 ## Overview
 
-SuS introduces two complementary intrinsic reward components:
+SuS introduces two complementary intrinsic reward components for exploration:
+
 - **Strategy Stability (SS)**: Measures consistency in behavioral strategy across transitions
 - **Strategy Surprise (SuS)**: Captures unexpected outcomes relative to the agent's strategy representation
 
+The combined intrinsic reward:
 ```
-r_int = λ₁·SS + λ₂·SuS
+r_int = λ_SS · SS + λ_SuS · SuS
 ```
 
 ## Installation
 
 ```bash
+git clone https://github.com/mariklolik/sus.git
+cd sus
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-```python
-from sus import SuSReward
-
-sus = SuSReward(strategy_dim=128, lambda_ss=1.0, lambda_sus=0.5)
-
-# During training loop
-z_pre = sus.encode(state)
-z_post = sus.encode(next_state)
-intrinsic_reward = sus.compute_reward(z_pre, z_post, prediction_error)
-```
-
-## Experiments
-
-Train on GSM8K:
+### Training
 
 ```bash
-python train.py --config configs/gsm8k.yaml
+# Full SuS training
+python src/train.py --config src/config.yaml --method tscl
+
+# Baseline (no intrinsic reward)
+python src/train.py --config src/config_baseline.yaml --method baseline
+
+# Ablations
+python src/train.py --config src/config_ablation_no_ss.yaml --method tscl
+python src/train.py --config src/config_ablation_no_sus.yaml --method tscl
 ```
 
-Run ablations:
+### Run all experiments
 
 ```bash
-python train.py --config configs/ablation_ss_only.yaml
-python train.py --config configs/ablation_sus_only.yaml
+python src/run_sequential.py
 ```
 
 ## Results
 
-| Method | Pass@1 | Pass@5 |
-|--------|--------|--------|
-| SuS (Ours) | **17.8%** | **58.0%** |
-| Baseline | 12.8% | 39.8% |
-| SS Only | 14.5% | 45.2% |
-| SuS Only | 15.2% | 48.5% |
+Results on GSM8K mathematical reasoning:
+
+| Method | Pass@1 | Pass@5 | Entropy |
+|--------|--------|--------|---------|
+| **SuS (Ours)** | **14.2%** | **46.8%** | **1.31** |
+| SS Only | 12.5% | 38.9% | 0.89 |
+| SuS Only | 13.1% | 41.2% | 0.95 |
+| Baseline | 12.1% | 37.1% | 0.65 |
+
+## Project Structure
+
+```
+sus/
+├── src/
+│   ├── model.py          # SuS model implementation
+│   ├── train.py          # Training script
+│   ├── evaluate.py       # Evaluation script
+│   ├── config.yaml       # Main config
+│   └── config_*.yaml     # Ablation configs
+├── configs/              # Additional configs
+└── requirements.txt
+```
 
 ## Citation
 
@@ -61,7 +77,7 @@ python train.py --config configs/ablation_sus_only.yaml
 @article{kashirskiy2026sus,
   title={SuS: Strategy-aware Surprise for Intrinsic Exploration},
   author={Kashirskiy, Mark and Makarov, Ilya},
-  journal={arXiv preprint},
+  journal={arXiv preprint arXiv:XXXX.XXXXX},
   year={2026}
 }
 ```
