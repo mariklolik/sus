@@ -2,7 +2,7 @@
 
 Official implementation for the paper "SuS: Strategy-aware Surprise for Intrinsic Exploration".
 
-[[Paper]](https://arxiv.org/abs/XXXX.XXXXX) [[Code]](https://github.com/mariklolik/sus)
+[[Paper]]([https://arxiv.org/abs/XXXX.XXXXX](https://arxiv.org/abs/2601.10349)) [[Code]](https://github.com/mariklolik/sus)
 
 ## Overview
 
