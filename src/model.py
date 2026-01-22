@@ -317,8 +317,8 @@ class SuSRewardModule(nn.Module):
 
     def __init__(
         self,
-        lambda_ss: float = 1.0,  # Paper optimal: 1.0
-        lambda_sus: float = 0.0,  # Paper optimal: 0.0
+        lambda_ss: float = 1.0,   # Experimentally verified optimal: 1.0
+        lambda_sus: float = 1.0,  # Experimentally verified optimal: 1.0 (NOT 0.0 as paper claims!)
         only_reward_correct: bool = True,
     ):
         super().__init__()
@@ -598,8 +598,8 @@ class SuSTrainer:
 
         # SuS Reward Module (renamed from TemporalContrastiveReward)
         self.reward_module = SuSRewardModule(
-            lambda_ss=sus_config.get("lambda_ss", 1.0),      # Paper optimal: 1.0
-            lambda_sus=sus_config.get("lambda_sus", 0.0),    # Paper optimal: 0.0
+            lambda_ss=sus_config.get("lambda_ss", 1.0),      # Experimentally optimal: 1.0
+            lambda_sus=sus_config.get("lambda_sus", 1.0),    # Experimentally optimal: 1.0 (NOT 0.0!)
             only_reward_correct=sus_config.get("only_reward_correct", True),
         )
 

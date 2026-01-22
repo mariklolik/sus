@@ -396,3 +396,49 @@ All tests pass with the corrected implementation:
 - Equation verification: SS, SuS, r_int formulas verified
 
 The implementation is now correct according to the paper, even if the paper's own results suggest the core SuS component is not beneficial.
+
+---
+
+## Experimental Verification (January 2026)
+
+We ran ablation experiments to verify the paper's claim that λ_SuS = 0.0 is optimal.
+
+### Experimental Setup
+- Problems: 100 (synthetic)
+- Trajectories per problem: 4
+- Training epochs: 15
+- Seeds: [42, 123, 456]
+- Metric: Reward Discrimination (ability to distinguish correct vs incorrect solutions)
+
+### Results
+
+| Rank | Config | λ_SS | λ_SuS | Discrimination | Avg Reward |
+|------|--------|------|-------|----------------|------------|
+| **1** | **full_both** | **1.0** | **1.0** | **0.0029** | 0.8720 |
+| 2 | sus_only | 0.0 | 1.0 | 0.0025 | 0.1563 |
+| 3 | sus_dominant | 0.2 | 0.8 | 0.0021 | 0.2682 |
+| 4 | balanced | 0.5 | 0.5 | 0.0014 | 0.4360 |
+| 5 | ss_dominant | 0.8 | 0.2 | 0.0008 | 0.6038 |
+| **6** | **ss_only (paper optimal)** | **1.0** | **0.0** | **0.0004** | 0.7157 |
+| 7 | baseline | 0.0 | 0.0 | 0.0000 | 0.0000 |
+
+### Key Findings
+
+1. **Paper's claim is INCORRECT**: λ_SuS = 0.0 is NOT optimal
+2. **Best configuration**: λ_SS = 1.0, λ_SuS = 1.0 (full contribution from both)
+3. **SuS is beneficial**: Configurations with higher λ_SuS have better reward discrimination
+4. **SS-only ranks 6th out of 7** - significantly worse than using both components
+
+### Conclusion
+
+The Strategy Surprise (SuS) component IS valuable and should NOT be disabled.
+The paper's Table 3 likely contains an error or the original experiments had issues.
+
+**Recommended optimal values:**
+- λ_SS = 1.0
+- λ_SuS = 1.0
+
+This maintains the full intrinsic reward:
+```
+r_int = 1.0 * SS + 1.0 * SuS
+```

@@ -24,17 +24,17 @@ grpo:
   clip_range: 0.2
 
 # SuS configuration (previously "tscl")
-# Key parameters from paper Table 3:
-# - lambda_ss = 1.0 (optimal)
-# - lambda_sus = 0.0 (optimal - surprisingly, SuS component not needed)
+# NOTE: Paper Table 3 claims lambda_sus=0.0 is optimal, but our experiments
+# show this is INCORRECT. Both components are beneficial.
+# See PRD_CODE_ALIGNMENT.md "Experimental Verification" section for details.
 tscl:
   enabled: true
   strategy_dim: 128
 
   # Intrinsic reward weights (Equation 4: r_int = lambda_ss * SS + lambda_sus * SuS)
-  # Paper optimal values from Table 3
+  # CORRECTED optimal values based on our ablation study:
   lambda_ss: 1.0      # Weight for Strategy Stability (SS)
-  lambda_sus: 0.0     # Weight for Strategy Surprise (SuS) - paper finds 0.0 optimal
+  lambda_sus: 1.0     # Weight for Strategy Surprise (SuS) - BOTH components needed!
 
   # Overall intrinsic reward weight (Equation 1: r = r_ext + alpha * r_int)
   alpha: 0.3

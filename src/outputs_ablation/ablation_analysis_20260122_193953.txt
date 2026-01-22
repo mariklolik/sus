@@ -1,0 +1,35 @@
+
+======================================================================
+ABLATION STUDY RESULTS
+======================================================================
+
+### Ranking by Reward Discrimination
+(Higher = better at distinguishing correct vs incorrect solutions)
+
+Rank  Config          λ_SS   λ_SuS  Discrimination  Avg Reward  
+----------------------------------------------------------------------
+1     full_both       1.0    1.0    0.0029          0.8720      
+2     sus_only        0.0    1.0    0.0025          0.1563      
+3     sus_dominant    0.2    0.8    0.0021          0.2682      
+4     balanced        0.5    0.5    0.0014          0.4360      
+5     ss_dominant     0.8    0.2    0.0008          0.6038      
+6     ss_only         1.0    0.0    0.0004          0.7157      
+7     baseline        0.0    0.0    0.0000          0.0000      
+
+----------------------------------------------------------------------
+ANALYSIS
+----------------------------------------------------------------------
+
+✓ Best configuration: full_both
+  λ_SS = 1.0, λ_SuS = 1.0
+  Reward discrimination: 0.0029
+
+### Comparison of Key Configurations:
+
+  SS Only (λ_SS=1, λ_SuS=0):  discrimination = 0.0004
+  SuS Only (λ_SS=0, λ_SuS=1): discrimination = 0.0025
+  Balanced (λ_SS=0.5, λ_SuS=0.5): discrimination = 0.0014
+
+### Verdict on Paper's Claim:
+  ✗ Paper's claim CONTRADICTED: SuS component IS beneficial
+  The Strategy Surprise component improves performance!
