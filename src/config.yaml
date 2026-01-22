@@ -1,3 +1,6 @@
+# SuS: Strategy-aware Surprise for Intrinsic Exploration
+# Configuration aligned with arXiv:2601.10349
+
 model:
   name: "Qwen/Qwen2.5-1.5B"
   use_4bit: false
@@ -20,16 +23,44 @@ grpo:
   gamma: 1.0
   clip_range: 0.2
 
+# SuS configuration (previously "tscl")
+# Key parameters from paper Table 3:
+# - lambda_ss = 1.0 (optimal)
+# - lambda_sus = 0.0 (optimal - surprisingly, SuS component not needed)
 tscl:
   enabled: true
   strategy_dim: 128
-  lambda_strategy: 0.5
-  lambda_success: 0.5
+
+  # Intrinsic reward weights (Equation 4: r_int = lambda_ss * SS + lambda_sus * SuS)
+  # Paper optimal values from Table 3
+  lambda_ss: 1.0      # Weight for Strategy Stability (SS)
+  lambda_sus: 0.0     # Weight for Strategy Surprise (SuS) - paper finds 0.0 optimal
+
+  # Overall intrinsic reward weight (Equation 1: r = r_ext + alpha * r_int)
   alpha: 0.3
+
   only_reward_correct: true
+
+  # Post-Hoc Strategy Encoder
   pse_model: "all-MiniLM-L6-v2"
   freeze_pse: true
+
+  # Network architecture
   dropout: 0.1
+
+  # World Model configuration (NEW - required by paper)
+  world_model_hidden_dim: 256
+
+  # Momentum Encoder (NEW - MoCo-style, required by paper)
+  use_momentum_encoder: true
+  momentum: 0.999
+
+  # Contrastive Learning (NEW - InfoNCE, required by paper)
+  use_contrastive: true
+  temperature: 0.07  # Temperature for InfoNCE loss
+
+  # Loss weight for intrinsic loss
+  intrinsic_loss_coef: 0.1
 
 cde:
   beta: 0.1
@@ -44,4 +75,4 @@ evaluation:
 seeds: [42, 123, 456]
 
 output_dir: "outputs"
-wandb_project: "tscl-experiments"
+wandb_project: "sus-experiments"

@@ -24,7 +24,7 @@ from datasets import load_dataset
 from tqdm import tqdm
 import wandb
 
-from model import TSCLTrainer, BaselineTrainer, PerplexityRewardTrainer, TSCLOutput
+from model import TSCLTrainer, SuSTrainer, BaselineTrainer, PerplexityRewardTrainer, TSCLOutput, SuSOutput
 
 
 def set_seed(seed: int):
@@ -211,8 +211,8 @@ def train_epoch_tscl(
     total_loss = 0.0
     total_policy_loss = 0.0
     total_intrinsic_loss = 0.0
-    strategy_surprises = []
-    success_surprises = []
+    strategy_stabilities = []   # SS - Strategy Stability
+    strategy_surprises = []     # SuS - Strategy Surprise
     diversity_scores = []
     accuracy_per_problem = []
 
@@ -246,8 +246,8 @@ def train_epoch_tscl(
         total_loss += output.total_loss.item()
         total_policy_loss += output.policy_loss.item()
         total_intrinsic_loss += output.intrinsic_loss.item() if isinstance(output.intrinsic_loss, torch.Tensor) else output.intrinsic_loss
-        strategy_surprises.append(output.strategy_surprise)
-        success_surprises.append(output.success_surprise)
+        strategy_stabilities.append(output.strategy_stability)  # SS
+        strategy_surprises.append(output.strategy_surprise)     # SuS
 
         correct = trajectory_data["correctness"].cpu().numpy()
         n_traj = config["training"]["num_trajectories_per_problem"]
@@ -259,8 +259,8 @@ def train_epoch_tscl(
 
         pbar.set_postfix({
             "loss": output.total_loss.item(),
-            "ss": output.strategy_surprise,
-            "sus": output.success_surprise,
+            "SS": output.strategy_stability,   # Strategy Stability
+            "SuS": output.strategy_surprise,   # Strategy Surprise
         })
 
         if wandb.run:
@@ -268,11 +268,14 @@ def train_epoch_tscl(
                 "train/loss": output.total_loss.item(),
                 "train/policy_loss": output.policy_loss.item(),
                 "train/intrinsic_loss": output.intrinsic_loss.item() if isinstance(output.intrinsic_loss, torch.Tensor) else output.intrinsic_loss,
-                "train/strategy_surprise": output.strategy_surprise,
-                "train/success_surprise": output.success_surprise,
+                "train/strategy_stability": output.strategy_stability,  # SS
+                "train/strategy_surprise": output.strategy_surprise,    # SuS
                 "train/pred_success": output.mean_pred_success,
                 "train/lr": scheduler.get_last_lr()[0],
             }
+            if output.embedding_metrics:
+                log_dict["train/prediction_error"] = output.embedding_metrics.get("prediction_error_mean", 0.0)
+                log_dict["train/high_ss_correct_ratio"] = output.embedding_metrics.get("high_ss_correct_ratio", 0.0)
             if output.diversity_metrics:
                 log_dict["train/strategy_cluster_entropy"] = output.diversity_metrics["strategy_cluster_entropy"]
                 log_dict["train/correct_diversity"] = output.diversity_metrics["correct_diversity"]
@@ -286,10 +289,10 @@ def train_epoch_tscl(
         "loss": total_loss / num_steps,
         "policy_loss": total_policy_loss / num_steps,
         "intrinsic_loss": total_intrinsic_loss / num_steps,
-        "strategy_surprise_mean": np.mean(strategy_surprises),
+        "strategy_stability_mean": np.mean(strategy_stabilities),  # SS
+        "strategy_stability_std": np.std(strategy_stabilities),
+        "strategy_surprise_mean": np.mean(strategy_surprises),     # SuS
         "strategy_surprise_std": np.std(strategy_surprises),
-        "success_surprise_mean": np.mean(success_surprises),
-        "success_surprise_std": np.std(success_surprises),
         "strategy_cluster_entropy": np.mean(diversity_scores) if diversity_scores else 0.0,
     }
 
@@ -604,10 +607,14 @@ def main(args):
         tokenizer.save_pretrained(output_dir / "model")
 
         if method_name == "tscl":
-            torch.save({
+            save_dict = {
                 "sph": trainer.sph.state_dict(),
                 "pse_projector": trainer.pse.projector.state_dict(),
-            }, output_dir / "tscl_heads.pt")
+                "world_model": trainer.world_model.state_dict(),
+            }
+            if trainer.momentum_encoder is not None:
+                save_dict["momentum_encoder"] = trainer.momentum_encoder.state_dict()
+            torch.save(save_dict, output_dir / "sus_heads.pt")
 
     results = {
         "config": config,

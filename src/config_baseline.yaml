@@ -1,3 +1,6 @@
+# Baseline: GRPO only (no intrinsic rewards)
+# This serves as the baseline for comparing SuS effectiveness
+
 model:
   name: "Qwen/Qwen2.5-1.5B"
   use_4bit: false
@@ -21,7 +24,11 @@ grpo:
   clip_range: 0.2
 
 tscl:
-  enabled: false
+  enabled: false  # Disabled for baseline
+
+cde:
+  beta: 0.1
+  perplexity_scale: 0.01
 
 evaluation:
   eval_steps: 25
@@ -31,4 +38,4 @@ evaluation:
 
 seeds: [42, 123, 456]
 output_dir: "outputs"
-wandb_project: "tscl-experiments"
+wandb_project: "sus-experiments"

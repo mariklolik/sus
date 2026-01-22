@@ -1,3 +1,7 @@
+# SuS Ablation: SuS Only (No Strategy Stability)
+# Tests: lambda_ss = 0.0, lambda_sus = 1.0
+# This isolates the Strategy Surprise (SuS) component
+
 model:
   name: "Qwen/Qwen2.5-1.5B"
   use_4bit: false
@@ -23,13 +27,28 @@ grpo:
 tscl:
   enabled: true
   strategy_dim: 128
-  lambda_strategy: 0.0
-  lambda_success: 1.0
+
+  # ABLATION: SuS only (no SS)
+  lambda_ss: 0.0      # Disabled - testing SuS in isolation
+  lambda_sus: 1.0     # Only Strategy Surprise
+
   alpha: 0.3
   only_reward_correct: true
+
   pse_model: "all-MiniLM-L6-v2"
   freeze_pse: true
   dropout: 0.1
+
+  world_model_hidden_dim: 256
+  use_momentum_encoder: true
+  momentum: 0.999
+  use_contrastive: true
+  temperature: 0.07
+  intrinsic_loss_coef: 0.1
+
+cde:
+  beta: 0.1
+  perplexity_scale: 0.01
 
 evaluation:
   eval_steps: 25
@@ -39,4 +58,4 @@ evaluation:
 
 seeds: [42, 123, 456]
 output_dir: "outputs"
-wandb_project: "tscl-experiments"
+wandb_project: "sus-experiments"
