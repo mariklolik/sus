@@ -240,7 +240,8 @@ class PostHocStrategyEncoder(nn.Module):
                 convert_to_tensor=True,
                 show_progress_bar=False,
             )
-        embeddings = embeddings.to(self.projector[0].weight.device).to(self.projector[0].weight.dtype)
+        # Clone to escape inference mode and enable gradient tracking through projector
+        embeddings = embeddings.clone().to(self.projector[0].weight.device).to(self.projector[0].weight.dtype)
         projected = self.projector(embeddings)
         return F.normalize(projected, dim=-1)
 

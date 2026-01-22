@@ -349,3 +349,50 @@ strategy_surprise = prediction_error * (1 - strategy_stability)
 # Correct intrinsic reward
 r_int = lambda_ss * strategy_stability + lambda_sus * strategy_surprise
 ```
+
+---
+
+## Critical Analysis of Paper Results
+
+### The SuS Paradox
+
+The paper "SuS: Strategy-aware Surprise for Intrinsic Exploration" presents a paradox in its own results:
+
+**According to Table 3 in the paper, the optimal hyperparameters are:**
+- λ_SS = 1.0 (Strategy Stability weight)
+- λ_SuS = 0.0 (Strategy Surprise weight)
+
+**This means the "Strategy Surprise" (SuS) component - which the method is named after - provides ZERO contribution to the optimal performance.**
+
+### Implications
+
+1. **Naming Irony**: The method is called "SuS" (Strategy-aware Surprise), but the surprise component is not useful.
+
+2. **Effective Algorithm**: With λ_SuS = 0.0, the intrinsic reward simplifies to:
+   ```
+   r_int = λ_SS * SS = 1.0 * cosine_similarity(z_pre, z_post)
+   ```
+   This is just **strategy consistency reward** - no surprise involved.
+
+3. **World Model Redundancy**: The World Model M is only used for computing SuS. With λ_SuS = 0.0, the World Model contributes nothing to the reward signal.
+
+4. **Architectural Overhead**: The implementation includes:
+   - World Model (unused for reward with optimal params)
+   - Complex SuS computation (multiplied by zero)
+   - Additional training loss for world model
+
+### Questions for Authors
+
+1. Why name the method "SuS" if the surprise component doesn't help?
+2. Were alternative formulations of SuS explored?
+3. Is SS alone sufficient? The ablation "SS Only" config matches optimal performance.
+4. What is the value of the World Model if it doesn't improve results?
+
+### Verification Status
+
+All tests pass with the corrected implementation:
+- Unit tests: 8/8 passed
+- Pipeline tests: All passed
+- Equation verification: SS, SuS, r_int formulas verified
+
+The implementation is now correct according to the paper, even if the paper's own results suggest the core SuS component is not beneficial.

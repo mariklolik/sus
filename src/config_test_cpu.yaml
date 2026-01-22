@@ -1,0 +1,51 @@
+# Minimal config for CPU testing
+# Uses tiny model and minimal samples
+
+model:
+  name: "gpt2"  # Small model for testing
+  use_4bit: false
+  use_lora: true
+  lora_r: 4
+  lora_alpha: 8
+  lora_dropout: 0.05
+
+training:
+  num_epochs: 1
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  learning_rate: 2.0e-5
+  warmup_ratio: 0.1
+  max_length: 64
+  num_trajectories_per_problem: 2
+
+grpo:
+  kl_coef: 0.1
+  gamma: 1.0
+  clip_range: 0.2
+
+tscl:
+  enabled: true
+  strategy_dim: 32
+  lambda_ss: 1.0
+  lambda_sus: 0.0
+  alpha: 0.3
+  only_reward_correct: true
+  pse_model: "all-MiniLM-L6-v2"
+  freeze_pse: true
+  dropout: 0.1
+  world_model_hidden_dim: 64
+  use_momentum_encoder: true
+  momentum: 0.999
+  use_contrastive: true
+  temperature: 0.07
+  intrinsic_loss_coef: 0.1
+
+evaluation:
+  eval_steps: 1
+  num_eval_samples: 2
+  compute_diversity_metrics: true
+  k_values: [1, 2]
+
+seeds: [42]
+output_dir: "outputs_test"
+wandb_project: "sus-test"
