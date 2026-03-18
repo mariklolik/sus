@@ -1,11 +1,11 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Training metrics averaged over steps 1800--2000. \texttt{frac\_zero\_std} measures the fraction of batches with zero reward standard deviation. Methods preserving zero-variance (top five) all achieve Pass@1 $>$ 73\% with healthy KL. Random PSE trains identically to real PSE but evaluates at the no-bonus level, confirming the semantic signal drives accuracy. $^\dagger$Our reimplementation.}
+\caption{Training metrics averaged over steps 1800--2000. $f_{\text{zv}}$ (zero-variance fraction) measures the fraction of batches with zero reward standard deviation. Methods preserving zero-variance (top five) all achieve Pass@1 $>$ 73\% with healthy KL. Random PSE trains identically to real PSE but evaluates at the no-bonus level, confirming the semantic signal drives accuracy. $^\dagger$Our reimplementation.}
 \label{tab:training_dynamics}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-Method & KL & Length & frac\_zero\_std & Pass@1 \\
+Method & KL & Length & $f_{\text{zv}}$ & Pass@1 \\
 \midrule
 \multicolumn{5}{l}{\textit{Zero-variance preserving ($\geq$0.63):}} \\
 \textbf{SuS (Ours)} & 0.061 & 268 & 0.67 & \textbf{74.42} \\
