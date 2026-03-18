@@ -7,12 +7,14 @@
 \toprule
 Method & KL & Length & frac\_zero\_std & Pass@1 \\
 \midrule
+\multicolumn{5}{l}{\textit{Zero-variance preserving ($\geq$0.63):}} \\
 \textbf{SuS (Ours)} & 0.061 & 268 & 0.67 & \textbf{74.42} \\
 GRPO Baseline & 0.071 & 237 & 0.65 & 73.98 \\
 RS-GRPO & 0.084 & 277 & 0.63 & 73.57 \\
 Random PSE & 0.049 & 270 & 0.66 & 73.49 \\
 SuS $\beta{=}0.0$ & 0.064 & 277 & 0.65 & 73.46 \\
 \midrule
+\multicolumn{5}{l}{\textit{Zero-variance violating:}} \\
 ProGRPO-ARM$^\dagger$ & 0.057 & 251 & 0.01 & 72.23 \\
 Entropy Bonus & 0.492 & 83 & 0.31 & 61.37 \\
 \bottomrule
