@@ -24,6 +24,7 @@ class SuSConfig:
     difficulty_aware: bool = True
     difficulty_ema: float = 0.1
     pse_model: str = "all-MiniLM-L6-v2"
+    random_pse: bool = False  # Use random unit vectors instead of real embeddings
 
 
 def _extract_gsm8k_gt(ground_truth: str) -> Optional[str]:
@@ -66,12 +67,22 @@ def _completion_to_text(completion) -> str:
 class PSEncoder:
     """Frozen SentenceTransformer for strategy embeddings."""
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", device: str = "cpu"):
-        self.encoder = SentenceTransformer(model_name, device=device)
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", device: str = "cpu",
+                 random_mode: bool = False):
+        self.random_mode = random_mode
         self.device = device
+        if not random_mode:
+            self.encoder = SentenceTransformer(model_name, device=device)
+        else:
+            self.encoder = None
+            self._dim = 384  # Match MiniLM-L6-v2 dimension
 
     @torch.no_grad()
     def encode(self, texts: List[str]) -> torch.Tensor:
+        if self.random_mode:
+            # Random unit vectors — same shape as MiniLM, no semantic content
+            embeddings = torch.randn(len(texts), self._dim)
+            return F.normalize(embeddings.float(), dim=-1)
         embeddings = self.encoder.encode(
             texts, convert_to_tensor=True, show_progress_bar=False
         )
@@ -111,7 +122,8 @@ class SuSReward:
 
     def __init__(self, config: SuSConfig, device: str = "cpu"):
         self.config = config
-        self.pse = PSEncoder(model_name=config.pse_model, device=device)
+        self.pse = PSEncoder(model_name=config.pse_model, device=device,
+                             random_mode=config.random_pse)
         self.difficulty = DifficultyTracker(ema_alpha=config.difficulty_ema)
         self.answer_counts: Dict[str, int] = defaultdict(int)
         self.total_answers: int = 0

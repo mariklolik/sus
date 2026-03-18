@@ -13,7 +13,8 @@ from train_grpo import load_config, prepare_gsm8k, set_seed
 from sus_reward import SuSReward, SuSConfig
 
 
-def train(config_path: str, ss_bonus: float = 0.2, err_bonus: float = 0.0, seed: int = 42):
+def train(config_path: str, ss_bonus: float = 0.2, err_bonus: float = 0.0,
+          seed: int = 42, random_pse: bool = False):
     config = load_config(config_path)
     set_seed(seed)
 
@@ -42,7 +43,8 @@ def train(config_path: str, ss_bonus: float = 0.2, err_bonus: float = 0.0, seed:
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sus_config = SuSConfig(ss_bonus=ss_bonus, err_bonus=err_bonus)
+    sus_config = SuSConfig(ss_bonus=ss_bonus, err_bonus=err_bonus,
+                           random_pse=random_pse)
     reward_fn = SuSReward(sus_config, device=device)
     reward_fn.__name__ = "sus_reward"
 
@@ -52,7 +54,8 @@ def train(config_path: str, ss_bonus: float = 0.2, err_bonus: float = 0.0, seed:
 
     bonus_str = f"{ss_bonus:.1f}".replace(".", "")
     err_str = f"{err_bonus:.2f}".replace(".", "")
-    run_name = f"grpo_sus_b{bonus_str}_e{err_str}_seed{seed}"
+    rnd_str = "_randpse" if random_pse else ""
+    run_name = f"grpo_sus_b{bonus_str}_e{err_str}{rnd_str}_seed{seed}"
     output_dir = os.path.join(config.get("output_dir", "outputs"), run_name)
 
     grpo_config = GRPOConfig(
@@ -79,8 +82,11 @@ def train(config_path: str, ss_bonus: float = 0.2, err_bonus: float = 0.0, seed:
     wandb_project = config.get("wandb_project", "sus-paper")
     os.environ.setdefault("WANDB_PROJECT", wandb_project)
 
+    # In distributed mode (torchrun), don't use device_map — let Trainer handle placement
+    distributed = int(os.environ.get("WORLD_SIZE", "1")) > 1
     model = AutoModelForCausalLM.from_pretrained(
-        model_name, torch_dtype=torch.bfloat16, device_map="auto",
+        model_name, torch_dtype=torch.bfloat16,
+        **({} if distributed else {"device_map": "auto"}),
     )
 
     trainer = GRPOTrainer(
@@ -105,5 +111,8 @@ if __name__ == "__main__":
     parser.add_argument("--ss_bonus", type=float, default=0.2)
     parser.add_argument("--err_bonus", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--random_pse", action="store_true",
+                        help="Replace MiniLM with random unit vectors (ablation)")
     args = parser.parse_args()
-    train(config_path=args.config, ss_bonus=args.ss_bonus, err_bonus=args.err_bonus, seed=args.seed)
+    train(config_path=args.config, ss_bonus=args.ss_bonus, err_bonus=args.err_bonus,
+          seed=args.seed, random_pse=args.random_pse)

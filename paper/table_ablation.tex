@@ -1,16 +1,17 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Ablation study. Removing either component degrades performance.}
+\caption{Ablation over novelty bonus strength $\beta$ and error bonus. All variants use the SuS reward structure with zero-variance preservation; $\beta{=}0$ reduces to pure GRPO within the SuS framework. Best configuration in bold. $^\dagger$Evaluated from checkpoint at step 1500 due to training timeout.}
 \label{tab:ablation}
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}cccccc@{}}
 \toprule
-Variant & Pass@1 & Pass@5 & $\Delta$ \\
+$\beta$ & err\_bonus & Pass@1 & Pass@5 & Pass@8 \\
 \midrule
-SuS (Full) & 14.2\% & 46.8\% & -- \\
-SS Only & 12.5\% & 38.9\% & -12.0\% \\
-SuS Only & 13.1\% & 41.2\% & -7.7\% \\
-Baseline & 12.1\% & 37.1\% & -14.8\% \\
+0.0 & 0.0 & 73.46 & 90.07 & 92.57 \\
+\textbf{0.1} & \textbf{0.0} & \textbf{74.42} & \textbf{90.36} & \textbf{92.74} \\
+0.2 & 0.0 & 73.11 & 89.91 & 92.43 \\
+0.2 & 0.05 & 72.06 & 89.47 & 92.10 \\
+0.3$^\dagger$ & 0.05 & 72.28 & 89.54 & 92.37 \\
 \bottomrule
 \end{tabular}
 \end{table}

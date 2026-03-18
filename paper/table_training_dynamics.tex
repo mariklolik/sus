@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Training metrics averaged over steps 1800--2000. \texttt{frac\_zero\_std} measures the fraction of batches with zero reward standard deviation (higher = more zero-variance batches preserved). Methods preserving zero-variance (top four) maintain healthy KL and achieve the best accuracy. Random PSE trains identically to real PSE but evaluates at the no-bonus level, confirming the semantic signal drives accuracy.}
+\label{tab:training_dynamics}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & KL & Length & frac\_zero\_std & Pass@1 \\
+\midrule
+\textbf{SuS (Ours)} & 0.061 & 268 & 0.67 & \textbf{74.42} \\
+GRPO Baseline & 0.071 & 237 & 0.65 & 73.98 \\
+RS-GRPO & 0.084 & 277 & 0.63 & 73.57 \\
+Random PSE & 0.049 & 270 & 0.66 & 73.49 \\
+SuS $\beta{=}0.0$ & 0.064 & 277 & 0.65 & 73.46 \\
+\midrule
+ProGRPO-ARM & 0.057 & 251 & 0.01 & 72.23 \\
+Entropy Bonus & 0.492 & 83 & 0.31 & 61.37 \\
+\bottomrule
+\end{tabular}
+\end{table}

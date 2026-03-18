@@ -1,27 +1,35 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Hyperparameter settings for SuS.}
+\caption{Hyperparameter settings. All methods share the same base configuration; SuS adds only two parameters ($\beta$ and PSE model).}
 \label{tab:hyperparameters}
 \begin{tabular}{@{}lc@{}}
 \toprule
 Parameter & Value \\
 \midrule
-\textit{SuS} & \\
-Strategy dimension $d$ & 128 \\
-$\lambda_{SS}$ (SS weight) & 1.0 \\
-$\lambda_{SuS}$ (SuS weight) & 0.0 \\
-Intrinsic scale $\alpha$ & 0.3 \\
+\textit{Model} & \\
+Base model & Qwen2.5-1.5B-Instruct \\
+LoRA rank $r$ & 64 \\
+LoRA $\alpha$ & 128 \\
+LoRA dropout & 0.05 \\
 \midrule
 \textit{Training} & \\
-Epochs & 3 \\
-Batch size & 2 \\
-Learning rate & 2e-5 \\
-Trajectories/problem & 8 \\
+Max steps & 2000 \\
+Learning rate & $5 \times 10^{-6}$ \\
+Warmup ratio & 0.05 \\
+Batch size (prompts) & 8 \\
+Gradient accumulation & 2 \\
+Max completion length & 1024 \\
+Generations per prompt $G$ & 8 \\
 \midrule
-\textit{Model} & \\
-Base model & Qwen2.5-1.5B \\
-LoRA rank & 8 \\
+\textit{GRPO} & \\
+KL coefficient $\lambda_{\text{KL}}$ & 0.001 \\
+Clip range $\epsilon$ & 0.2 \\
+\midrule
+\textit{SuS-specific} & \\
+Novelty bonus $\beta$ & 0.1 \\
+PSE model & all-MiniLM-L6-v2 \\
+Difficulty EMA $\alpha_d$ & 0.1 \\
 \bottomrule
 \end{tabular}
 \end{table}

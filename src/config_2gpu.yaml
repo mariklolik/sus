@@ -1,0 +1,28 @@
+model:
+  name: "Qwen/Qwen2.5-1.5B-Instruct"
+  lora_r: 64
+  lora_alpha: 128
+  lora_dropout: 0.05
+
+training:
+  num_epochs: 1
+  max_steps: 2000
+  batch_size: 8                    # 8 completions = 1 prompt per GPU
+  gradient_accumulation_steps: 1   # 2 GPUs × 1 = 2 prompts/step (matches 1-GPU with grad_accum=2)
+  learning_rate: 5.0e-6
+  warmup_ratio: 0.05
+  max_completion_length: 1024
+  num_trajectories_per_problem: 8
+  use_vllm: false
+
+grpo:
+  kl_coef: 0.001
+  clip_range: 0.2
+
+evaluation:
+  num_eval_samples: 1319
+  k_values: [1, 5, 8]
+
+seeds: [42, 123, 456]
+output_dir: "outputs"
+wandb_project: "sus-paper"

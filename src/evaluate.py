@@ -86,6 +86,8 @@ def evaluate_method(
     batch_size: int = 8,
     seed: int = 42,
     checkpoint_dir: Optional[str] = None,
+    start_idx: int = 0,
+    end_idx: Optional[int] = None,
 ) -> Dict:
     if checkpoint_dir is None:
         checkpoint_dir = os.path.join(output_dir, f"grpo_{method}_seed{seed}")
@@ -114,7 +116,13 @@ def evaluate_method(
     model.eval()
 
     ds = load_dataset("gsm8k", "main", split="test")
-    print(f"  GSM8K test: {len(ds)} problems, {n_samples} samples each")
+    total_problems = len(ds)
+    actual_end = end_idx if end_idx is not None else total_problems
+    if start_idx > 0 or actual_end < total_problems:
+        ds = ds.select(range(start_idx, actual_end))
+        print(f"  GSM8K test: problems [{start_idx}:{actual_end}] ({len(ds)} of {total_problems}), {n_samples} samples each")
+    else:
+        print(f"  GSM8K test: {len(ds)} problems, {n_samples} samples each")
 
     correct_per_problem = []
 
@@ -153,6 +161,7 @@ def evaluate_method(
             print(f"    [{idx+1}/{len(ds)}] running pass@1 = {running_pass1:.4f}")
 
     results = {"method": method, "seed": seed, "n_samples": n_samples}
+    results["correct_per_problem"] = correct_per_problem  # Raw counts for shard merging
     for k in [1, 5, 8]:
         if k <= n_samples:
             results[f"pass@{k}"] = compute_pass_at_k(correct_per_problem, n_samples, k)
@@ -180,6 +189,10 @@ def main():
     parser.add_argument("--methods", type=str, nargs="*", default=None)
     parser.add_argument("--method_name", type=str, default=None)
     parser.add_argument("--checkpoint_dir", type=str, default=None)
+    parser.add_argument("--start_idx", type=int, default=0,
+                        help="Start problem index (for parallel eval)")
+    parser.add_argument("--end_idx", type=int, default=None,
+                        help="End problem index (for parallel eval)")
     args = parser.parse_args()
 
     default_methods = ["baseline", "entropy_bonus", "rs_grpo", "progrpo_arm"]
@@ -207,6 +220,8 @@ def main():
                 batch_size=args.batch_size,
                 seed=args.seed,
                 checkpoint_dir=custom_checkpoints.get(method),
+                start_idx=args.start_idx,
+                end_idx=args.end_idx,
             )
             if result:
                 all_results[method] = result
@@ -216,7 +231,8 @@ def main():
                       f"CI95={result.get('pass@1_ci_95', 'N/A')}  "
                       f"({result.get('eval_time_seconds', 0):.0f}s)")
 
-                per_method_path = os.path.join(args.output_dir, f"eval_result_{method}.json")
+                shard_suffix = f"_s{args.start_idx}_e{args.end_idx}" if args.end_idx else ""
+                per_method_path = os.path.join(args.output_dir, f"eval_result_{method}{shard_suffix}.json")
                 with open(per_method_path, "w") as f:
                     json.dump({method: result}, f, indent=2)
                 out_path = os.path.join(args.output_dir, "eval_results_final.json")

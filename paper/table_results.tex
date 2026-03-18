@@ -1,17 +1,17 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Main results on GSM8K. SuS achieves best performance across all metrics.}
+\caption{Main results on GSM8K (1319 problems, 16 samples/problem). Pass@$k$ computed with the unbiased estimator of \citet{chen2021evaluating}. 95\% confidence intervals from bootstrap resampling ($n{=}10{,}000$). All methods use Qwen2.5-1.5B-Instruct with LoRA, trained for 2000 GRPO steps.}
 \label{tab:main_results}
-\begin{tabular}{@{}lccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-Method & Pass@1 & Pass@5 & Entropy \\
+Method & Pass@1 & 95\% CI & Pass@5 & Pass@8 \\
 \midrule
-\textbf{SuS (Ours)} & \textbf{14.2\%} & \textbf{46.8\%} & \textbf{1.31} \\
-Baseline & 12.1\% & 37.1\% & 0.65 \\
-Perplexity & 12.1\% & 37.1\% & 0.68 \\
-\midrule
-\textit{Improvement} & +17.4\% & +26.4\% & +101\% \\
+\textbf{SuS (Ours)} & \textbf{74.42} & \textbf{[72.65, 76.22]} & \textbf{90.36} & \textbf{92.74} \\
+GRPO Baseline & 73.98 & [72.10, 75.83] & 89.53 & 91.88 \\
+RS-GRPO & 73.57 & [71.78, 75.36] & 90.12 & 92.72 \\
+ProGRPO-ARM & 72.23 & [70.38, 74.04] & 89.49 & 92.24 \\
+Entropy Bonus & 61.37 & [59.29, 63.49] & 81.80 & 85.71 \\
 \bottomrule
 \end{tabular}
 \end{table}

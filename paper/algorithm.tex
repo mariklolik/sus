@@ -1,26 +1,34 @@
 \begin{algorithm}[t]
-\caption{Strategy-aware Surprise (SuS)}
+\caption{SuS Reward Computation}
 \label{alg:sus}
 \begin{algorithmic}[1]
-\REQUIRE Policy $\pi_\theta$, Strategy encoder $E_\psi$, Predictor $P$
-\REQUIRE Weights $\lambda_{SS}, \lambda_{SuS}$, Scale $\alpha$
-\STATE Initialize $\theta, \psi$
-\FOR{each training iteration}
-    \STATE Sample problems from dataset
-    \FOR{each problem}
-        \STATE Generate $K$ trajectories using $\pi_\theta$
-        \FOR{each trajectory}
-            \STATE $z_{pre} \gets E_\psi(\text{query})$
-            \STATE $z_{post} \gets \text{PSE}(\text{response})$
-            \STATE $SS \gets 1 - \cos(z_{pre}, z_{post})$
-            \STATE $SuS \gets |c - P(\text{query})|$
-            \STATE $r_{int} \gets \lambda_{SS} \cdot SS + \lambda_{SuS} \cdot SuS$
-            \STATE $r \gets r_{ext} + \alpha \cdot r_{int} \cdot \mathbf{1}[c{=}1]$
-        \ENDFOR
+\REQUIRE Completions $\{y_1, \ldots, y_G\}$ for prompt $x$, correctness oracle $\mathcal{O}$, frozen PSE $E$, novelty bonus $\beta$, difficulty tracker $\mathcal{D}$
+\STATE $c_i \gets \mathcal{O}(y_i, x)$ for $i = 1, \ldots, G$ \COMMENT{Check correctness}
+\STATE $f_i \gets \mathbf{1}[\texttt{<answer>} \in y_i \wedge \texttt{</answer>} \in y_i]$ \COMMENT{Format check}
+\STATE $n_{\text{correct}} \gets \sum_{i} c_i$
+\IF{$n_{\text{correct}} = 0$ \textbf{or} $n_{\text{correct}} = G$}
+    \STATE \textbf{// Uniform batch: identical rewards $\Rightarrow$ zero advantage variance}
+    \STATE $r_i \gets c_i + 0.2 \cdot f_i$ for all $i$
+\ELSE
+    \STATE \textbf{// Mixed batch: add novelty bonus to correct responses}
+    \STATE $\mathcal{C} \gets \{i : c_i = 1\}$ \COMMENT{Correct indices}
+    \IF{$|\mathcal{C}| \geq 2$}
+        \STATE $\mathbf{e}_i \gets E(y_i)$ for $i \in \mathcal{C}$ \COMMENT{PSE embeddings}
+        \STATE $\text{nov}_i \gets 1 - \frac{1}{|\mathcal{C}|-1} \sum_{j \in \mathcal{C} \setminus \{i\}} \mathbf{e}_i^\top \mathbf{e}_j$ \COMMENT{Intra-batch novelty}
+    \ELSE
+        \STATE \textbf{//} $|\mathcal{C}| = 1$: single correct response is maximally novel
+        \STATE $\text{nov}_i \gets 1$ for $i \in \mathcal{C}$
+    \ENDIF
+    \STATE $d \gets \mathcal{D}.\text{get\_difficulty}(x)$ \COMMENT{$d = 1 - \text{EMA}(\text{accuracy})$}
+    \FOR{$i = 1, \ldots, G$}
+        \IF{$c_i = 1$}
+            \STATE $r_i \gets 1.0 + 0.2 \cdot f_i + \beta \cdot \text{nov}_i \cdot d$
+        \ELSE
+            \STATE $r_i \gets 0.0 + 0.2 \cdot f_i$
+        \ENDIF
     \ENDFOR
-    \STATE Update $\theta$ via GRPO with augmented rewards
-    \STATE Update $\psi$ on strategy prediction loss
-\ENDFOR
-\RETURN Trained policy $\pi_\theta$
+\ENDIF
+\STATE Update $\mathcal{D}$ with batch accuracy $n_{\text{correct}} / G$
+\RETURN $\{r_1, \ldots, r_G\}$
 \end{algorithmic}
 \end{algorithm}
