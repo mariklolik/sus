@@ -8,6 +8,7 @@ to prevent spurious gradients and KL divergence blowup.
 
 import re
 import math
+import hashlib
 import torch
 import torch.nn.functional as F
 from collections import defaultdict
@@ -19,7 +20,7 @@ from sentence_transformers import SentenceTransformer
 
 @dataclass
 class SuSConfig:
-    ss_bonus: float = 0.2
+    ss_bonus: float = 0.1
     err_bonus: float = 0.0
     difficulty_aware: bool = True
     difficulty_ema: float = 0.1
@@ -173,7 +174,7 @@ class SuSReward:
         n_total = len(correct_flags)
         is_mixed = 0 < n_correct < n_total
 
-        problem_id = str(hash(prompt))
+        problem_id = hashlib.sha256(prompt.encode()).hexdigest()[:16]
         difficulty_weight = (
             self.difficulty.get_difficulty(problem_id)
             if self.config.difficulty_aware else 1.0
@@ -286,7 +287,7 @@ class SuSReward:
 
 
 def build_sus_reward(
-    ss_bonus: float = 0.2,
+    ss_bonus: float = 0.1,
     err_bonus: float = 0.0,
     difficulty_aware: bool = True,
     device: str = "cuda",

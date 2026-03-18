@@ -62,7 +62,7 @@ def compute_pass_at_k(correct_per_problem: List[int], n: int, k: int) -> float:
     return float(np.mean([_single(n, c, k) for c in correct_per_problem]))
 
 
-def bootstrap_ci(values: List[float], n_bootstrap: int = 2000, ci: float = 0.95) -> Tuple[float, float]:
+def bootstrap_ci(values: List[float], n_bootstrap: int = 10000, ci: float = 0.95) -> Tuple[float, float]:
     rng = np.random.default_rng(42)
     arr = np.array(values, dtype=float)
     means = np.array([np.mean(rng.choice(arr, size=len(arr), replace=True)) for _ in range(n_bootstrap)])
