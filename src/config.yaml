@@ -1,0 +1,28 @@
+model:
+  name: "Qwen/Qwen2.5-1.5B-Instruct"
+  lora_r: 64
+  lora_alpha: 128
+  lora_dropout: 0.05
+
+training:
+  num_epochs: 1
+  max_steps: 2000                  # ~10h on 1 H100; sufficient for convergence on 1.5B
+  batch_size: 8                    # must be divisible by num_trajectories_per_problem (TRL constraint)
+  gradient_accumulation_steps: 2   # effective batch = 2 prompts per optimizer step
+  learning_rate: 5.0e-6
+  warmup_ratio: 0.05
+  max_completion_length: 1024
+  num_trajectories_per_problem: 8
+  use_vllm: false              # TRL server mode hangs; native gen fast enough for 1.5B on H100
+
+grpo:
+  kl_coef: 0.001
+  clip_range: 0.2
+
+evaluation:
+  num_eval_samples: 1319
+  k_values: [1, 5, 8]
+
+seeds: [42, 123, 456]
+output_dir: "outputs"
+wandb_project: "sus-paper"

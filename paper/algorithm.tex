@@ -1,0 +1,26 @@
+\begin{algorithm}[t]
+\caption{Strategy-aware Surprise (SuS)}
+\label{alg:sus}
+\begin{algorithmic}[1]
+\REQUIRE Policy $\pi_\theta$, Strategy encoder $E_\psi$, Predictor $P$
+\REQUIRE Weights $\lambda_{SS}, \lambda_{SuS}$, Scale $\alpha$
+\STATE Initialize $\theta, \psi$
+\FOR{each training iteration}
+    \STATE Sample problems from dataset
+    \FOR{each problem}
+        \STATE Generate $K$ trajectories using $\pi_\theta$
+        \FOR{each trajectory}
+            \STATE $z_{pre} \gets E_\psi(\text{query})$
+            \STATE $z_{post} \gets \text{PSE}(\text{response})$
+            \STATE $SS \gets 1 - \cos(z_{pre}, z_{post})$
+            \STATE $SuS \gets |c - P(\text{query})|$
+            \STATE $r_{int} \gets \lambda_{SS} \cdot SS + \lambda_{SuS} \cdot SuS$
+            \STATE $r \gets r_{ext} + \alpha \cdot r_{int} \cdot \mathbf{1}[c{=}1]$
+        \ENDFOR
+    \ENDFOR
+    \STATE Update $\theta$ via GRPO with augmented rewards
+    \STATE Update $\psi$ on strategy prediction loss
+\ENDFOR
+\RETURN Trained policy $\pi_\theta$
+\end{algorithmic}
+\end{algorithm}

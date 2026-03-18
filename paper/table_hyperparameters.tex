@@ -1,0 +1,27 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Hyperparameter settings for SuS.}
+\label{tab:hyperparameters}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Parameter & Value \\
+\midrule
+\textit{SuS} & \\
+Strategy dimension $d$ & 128 \\
+$\lambda_{SS}$ (SS weight) & 1.0 \\
+$\lambda_{SuS}$ (SuS weight) & 0.0 \\
+Intrinsic scale $\alpha$ & 0.3 \\
+\midrule
+\textit{Training} & \\
+Epochs & 3 \\
+Batch size & 2 \\
+Learning rate & 2e-5 \\
+Trajectories/problem & 8 \\
+\midrule
+\textit{Model} & \\
+Base model & Qwen2.5-1.5B \\
+LoRA rank & 8 \\
+\bottomrule
+\end{tabular}
+\end{table}
