@@ -73,10 +73,10 @@ Given a prompt $x$, GRPO generates $G$ completions $\{y_1, \ldots, y_G\}$ from t
 \end{equation}
 where $\mu_r$ and $\sigma_r$ are the mean and standard deviation of rewards within the group. The policy is updated via a clipped objective with a KL penalty against a reference policy $\pi_{\text{ref}}$:
 \begin{equation}
-    \mathcal{L}_{\text{GRPO}} = -\mathbb{E}\left[\min\left(\rho_i \hat{A}_i,\; \text{clip}(\rho_i, 1{\pm}\epsilon)\hat{A}_i\right)\right] + \lambda_{\text{KL}} D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})
+    \mathcal{L} = -\mathbb{E}\!\left[\min\!\left(\rho_i \hat{A}_i,\, \text{clip}(\rho_i, 1{\pm}\epsilon)\hat{A}_i\right)\right] + \lambda_{\text{KL}} D_{\text{KL}}
     \label{eq:grpo_loss}
 \end{equation}
-where $\rho_i = \pi_\theta(y_i|x) / \pi_{\text{ref}}(y_i|x)$ is the importance ratio. Equations~\ref{eq:grpo_advantage} and~\ref{eq:grpo_loss} are schematic; TRL's GRPOTrainer uses a per-token KL approximation rather than the full-sequence $D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$. The KL values reported in experiments (e.g., Table~\ref{tab:training_dynamics}) are TRL's logged per-token KL approximation.
+where $\rho_i = \pi_\theta(y_i|x) / \pi_{\text{ref}}(y_i|x)$ and $D_{\text{KL}} = D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$. Equations~\ref{eq:grpo_advantage} and~\ref{eq:grpo_loss} are schematic; TRL's GRPOTrainer uses a per-token KL approximation rather than the full-sequence $D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$. The KL values reported in experiments (e.g., Table~\ref{tab:training_dynamics}) are TRL's logged per-token KL approximation.
 
 \paragraph{Reward structure.}
 In our setup, each completion $y_i$ receives a correctness reward $c_i \in \{0, 1\}$ (based on numerical answer matching against the ground truth) and a format reward $f_i \in \{0, 1\}$ indicating whether the answer is wrapped in \texttt{<answer>...</answer>} tags, weighted by 0.2. The correctness oracle extracts numerical answers via regex matching: it first checks for \texttt{<answer>} tags, then \texttt{\textbackslash boxed\{\}}, and falls back to the last number in the text.
