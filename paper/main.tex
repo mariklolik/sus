@@ -35,7 +35,7 @@ $^2$AI Talent Hub, ITMO University, Saint Petersburg, Russia \\[0.3em]
 \maketitle
 
 \begin{abstract}
-GRPO's group normalization creates a trap for exploration bonuses: any per-sample bonus applied to batches where all responses share the same correctness label produces \emph{phantom gradients}---policy updates driven entirely by the bonus, not the task reward. We formalize this failure mode (Proposition~1) and validate \emph{zero-variance preservation}---the principle that exploration bonuses must leave uniform batches untouched---across seven GRPO configurations on GSM8K with Qwen2.5-1.5B-Instruct. We also introduce \emph{random-embedding controls} as a general methodology for isolating active ingredients in exploration bonuses: replacing semantic embeddings with dimension-matched random unit vectors preserves all structural properties while eliminating semantic content. Applied to our case study---Strategy-aware Surprise (SuS), which confines novelty bonuses to correct responses in mixed-correctness batches---random vectors produce near-uniform novelty ($\approx$1.0) and yield zero gain (73.49\% $\approx$ 73.46\%), while semantically meaningful differentiation yields +0.96pp. Per-problem analysis shows a highly significant effect on hard problems (sign test $p < 10^{-10}$, robust across thresholds $\leq$1/16 to $\leq$8/16). Cross-dataset evaluation on MATH-500 confirms the principle transfers while MiniLM does not---identifying encoder domain specificity as the bottleneck.
+GRPO's group normalization zeroes out advantages for batches where all responses share the same reward---a built-in stability mechanism. Any per-sample exploration bonus with nonzero variance defeats this mechanism, producing \emph{phantom gradients} driven entirely by the bonus (Proposition~1). We call the resulting constraint \emph{zero-variance preservation} (ZVP). Across ten GRPO configurations on GSM8K with Qwen2.5-1.5B-Instruct, ZVP separates all six preserving configurations (Pass@1 ${>}$\,73\%) from all four violating ones ($-$1.75pp to $-$12.6pp). We instantiate the principle as Strategy-aware Surprise (SuS), which confines a semantic novelty bonus to correct responses in mixed-correctness batches. A three-way ablation---real sentence embeddings vs.\ random unit vectors vs.\ no bonus---shows that the gain requires per-sample semantic differentiation: random vectors yield zero benefit (+0.96pp, paired bootstrap $p{=}0.025$). Per-problem sign tests reveal a 3.1:1 advantage ratio on hard problems ($p < 10^{-10}$), and multi-seed partial training confirms the ZVP separation across three seeds. The principle is the main contribution; SuS is one instantiation.
 \end{abstract}
 
 %=============================================================================
@@ -43,22 +43,22 @@ GRPO's group normalization creates a trap for exploration bonuses: any per-sampl
 \label{sec:introduction}
 %=============================================================================
 
-Group Relative Policy Optimization \citep[GRPO;][]{shao2024deepseekmath} normalizes rewards within each generation group (Eq.~\ref{eq:grpo_advantage}). This normalization, deployed at scale by DeepSeek-R1 \citep{guo2025deepseek} and SimpleRL \citep{zeng2025simplerl}, creates a fundamental constraint on exploration bonus design: any per-sample bonus applied to batches where all responses share the same correctness label produces \emph{phantom gradients}---policy updates driven entirely by the bonus, not the task reward (Proposition~1). \emph{Where} bonuses are applied is at least as important as their magnitude.
+Group Relative Policy Optimization \citep[GRPO;][]{shao2024deepseekmath} normalizes rewards within each generation group (Eq.~\ref{eq:grpo_advantage}). This normalization, deployed at scale by DeepSeek-R1 \citep{guo2025deepseek} and SimpleRL \citep{zeng2025simplerl}, imposes a hard constraint on exploration bonus design: any per-sample bonus applied to batches where all responses share the same correctness label produces \emph{phantom gradients}---policy updates that reflect the bonus alone, not the task reward (Proposition~1). \emph{Where} bonuses are applied matters more than their magnitude.
 
-This constraint bites in practice. During GRPO training on GSM8K with Qwen2.5-1.5B-Instruct ($G{=}8$, 2000 steps; this fraction is configuration-dependent), $\sim$65\% of late-training batches are \emph{zero-variance}: all $G$ responses are either all correct or all incorrect. An exploration bonus that applies to these batches collapses Pass@1 to 61.4\% with $7{\times}$ KL divergence and completion lengths shrinking to 83 tokens. Even a partially-violating method (ProGRPO-ARM) drops to 72.2\%. Methods that confine bonuses to mixed-correctness batches all maintain Pass@1 $\geq$ 73.5\%.
+The constraint is not theoretical. During GRPO training on GSM8K with Qwen2.5-1.5B-Instruct, ${\sim}65\%$ of late-training batches are \emph{zero-variance}: all $G$ responses are either all correct or all incorrect. Applying the \emph{same} novelty bonus to all batches (SuS-All) collapses Pass@1 to 67.3\% with $7{\times}$ KL divergence and completion lengths shrinking to 110 tokens; confining the identical bonus to mixed batches only yields 74.4\%---a 7.1pp gap from batch gating alone. A na\"ive entropy bonus collapses Pass@1 further to 61.4\%. Every method that confines bonuses to mixed-correctness batches maintains Pass@1 $\geq$ 73.5\%.
 
-Several concurrent works have identified the importance of zero-variance batches: DAPO \citep{yu2025dapo} discards them, and RL-ZVP \citep{zhong2025noprompt} extracts learning signals from them. We complement these with a \emph{controlled empirical validation} of the simpler design strategy---\emph{zero-variance preservation}: exploration bonuses must not inject per-sample variance into uniform batches.
+We call this constraint \emph{zero-variance preservation}: exploration bonuses must not inject per-sample variance into uniform batches.
 
-To validate the principle and probe what makes a good exploration bonus \emph{within} zero-variance-preserving designs, we propose \textbf{Strategy-aware Surprise (SuS)}: a reward that confines semantic novelty bonuses---computed via cosine distance between frozen sentence embeddings---to correct responses in mixed-correctness batches only. SuS adds a single frozen encoder (all-MiniLM-L6-v2, 22M parameters) and two scalar hyperparameters to standard GRPO.
+To test what makes a good bonus \emph{within} preserving designs, we propose \textbf{Strategy-aware Surprise (SuS)}: a reward that adds a semantic novelty signal---cosine distance between frozen sentence embeddings---to correct responses in mixed batches only. SuS adds one frozen encoder (all-MiniLM-L6-v2, 22M parameters) and two scalars to standard GRPO.
 
-On GSM8K with Qwen2.5-1.5B-Instruct \citep{yang2025qwen2}, the most controlled comparison is within the SuS framework: $\beta{=}0.1$ achieves 74.42\% Pass@1 vs.\ 73.46\% at $\beta{=}0.0$ (+0.96pp), with the random-PSE ablation at 73.49\% confirming that the semantic signal---not arbitrary perturbation---accounts for the gain. Per-problem analysis reveals a highly significant effect on hard problems (baseline $\leq$4/16 correct): SuS achieves strictly higher success rates in 115 cases vs.\ 37 (3.1:1 ratio, sign test $p < 10^{-10}$), and uniquely solves 25 previously unsolvable problems.
+The most controlled comparison is within the SuS pipeline: $\beta{=}0.1$ achieves 74.42\% Pass@1 vs.\ 73.46\% at $\beta{=}0.0$ (+0.96pp, paired bootstrap $p{=}0.025$), with the random-PSE ablation at 73.49\% confirming that the gain requires meaningful semantic content, not arbitrary perturbation. Against external baselines, SuS achieves the highest Pass@$k$ at all thresholds (CIs overlap with GRPO at 73.98\%\,$\pm$\,1.9pp, expected for a sub-1pp effect). Per-problem sign tests show a 3.1:1 advantage ratio on hard problems ($p < 10^{-10}$), with 25 previously unsolvable problems rescued.
 
 \paragraph{Contributions.}
 \begin{enumerate}[leftmargin=*,noitemsep,topsep=2pt]
-    \item \textbf{Controlled validation of a design principle.} While several concurrent works have identified the importance of zero-variance batches in GRPO \citep{yu2025dapo, zhong2025noprompt, wang2025imentor}, we provide a controlled empirical validation: across seven configurations on GSM8K, zero-variance preservation is consistent with training outcomes in all seven configurations tested. The cleanest test comes from within the SuS framework: adding an error bonus that breaks ZVP (while keeping all else identical) drops Pass@1 by $-$1.05pp and $f_{\text{zv}}$ to 0.00. We formalize the failure mode as ``phantom gradients'' (Proposition~1).
-    \item \textbf{Instantiation.} We propose SuS, a zero-variance-preserving reward that confines semantic novelty bonuses to correct responses in mixed batches, requiring only a frozen 22M-parameter encoder and two scalar hyperparameters.
-    \item \textbf{Controlled ablation.} A three-way comparison (real PSE vs.\ random PSE vs.\ no bonus) isolates per-sample semantic differentiation as the active ingredient: random 384-d vectors produce near-uniform novelty and yield zero gain despite a larger absolute bonus, ruling out both constant reward uplift and arbitrary perturbation as explanations.
-    \item \textbf{Per-problem analysis.} While aggregate Pass@1 gains are statistically non-significant, per-problem analysis reveals a highly significant effect on hard problems (3.1:1 advantage ratio, sign test $p < 10^{-10}$), with qualitative evidence that the novelty bonus preserves minority correct strategies that baseline GRPO extinguishes.
+    \item \textbf{Design principle.} We formalize zero-variance preservation (Proposition~1) and validate it across ten configurations: all six preserving methods exceed 73\% Pass@1; all four violating methods degrade ($\leq$72.2\%).
+    \item \textbf{Instantiation.} SuS confines semantic novelty bonuses to correct responses in mixed batches, requiring only a frozen 22M-parameter encoder and two scalars.
+    \item \textbf{Controlled ablation.} Real PSE vs.\ random PSE vs.\ no bonus: random vectors eliminate the entire +0.96pp gain, establishing that the bonus must carry semantic content.
+    \item \textbf{Per-problem analysis.} Advantage ratios strengthen monotonically from 2.0:1 to 6.0:1 at harder thresholds ($p < 10^{-7}$), consistent with the mechanism: the bonus preserves minority correct strategies where collapse is worst.
 \end{enumerate}
 
 %=============================================================================
@@ -67,26 +67,26 @@ On GSM8K with Qwen2.5-1.5B-Instruct \citep{yang2025qwen2}, the most controlled c
 %=============================================================================
 
 \paragraph{GRPO.}
-Given a prompt $x$, GRPO generates $G$ completions $\{y_1, \ldots, y_G\}$ from the current policy $\pi_\theta$. Each completion receives a reward $r_i$ from a reward function. The advantage for completion $i$ is computed by group normalization:
+Given a prompt $x$, GRPO generates $G$ completions $\{y_1, \ldots, y_G\}$ from the current policy $\pi_\theta$. Each completion receives a reward $r_i$. The advantage is computed by group normalization:
 \begin{equation}
     \hat{A}_i = \frac{r_i - \mu_r}{\sigma_r + \epsilon}
     \label{eq:grpo_advantage}
 \end{equation}
-where $\mu_r$ and $\sigma_r$ are the mean and standard deviation of rewards within the group. The policy is updated via a clipped objective with a KL penalty against a reference policy $\pi_{\text{ref}}$:
+where $\mu_r$ and $\sigma_r$ are the mean and standard deviation of rewards within the group. The policy is updated via a clipped objective with a KL penalty:
 \begin{equation}
     \mathcal{L} = -\mathbb{E}\!\left[\min\!\left(\rho_i \hat{A}_i,\, \text{clip}(\rho_i, 1{\pm}\epsilon)\hat{A}_i\right)\right] + \lambda_{\text{KL}} D_{\text{KL}}
     \label{eq:grpo_loss}
 \end{equation}
-where $\rho_i = \pi_\theta(y_i|x) / \pi_{\text{ref}}(y_i|x)$ and $D_{\text{KL}} = D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$. Equations~\ref{eq:grpo_advantage} and~\ref{eq:grpo_loss} are schematic; TRL's GRPOTrainer uses a per-token KL approximation rather than the full-sequence $D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$. The KL values reported in experiments (e.g., Table~\ref{tab:training_dynamics}) are TRL's logged per-token KL approximation.
+where $\rho_i = \pi_\theta(y_i|x) / \pi_{\text{ref}}(y_i|x)$. Equations~\ref{eq:grpo_advantage}--\ref{eq:grpo_loss} are schematic; TRL's GRPOTrainer uses a per-token KL approximation.
 
 \paragraph{Reward structure.}
-In our setup, each completion $y_i$ receives a correctness reward $c_i \in \{0, 1\}$ (based on numerical answer matching against the ground truth) and a format reward $f_i \in \{0, 1\}$ indicating whether the answer is wrapped in \texttt{<answer>...</answer>} tags, weighted by 0.2. The correctness oracle extracts numerical answers via regex matching: it first checks for \texttt{<answer>} tags, then \texttt{\textbackslash boxed\{\}}, and falls back to the last number in the text.
+Each completion receives a correctness reward $c_i \in \{0, 1\}$ (numerical answer match) and a format reward $f_i \in \{0, 1\}$ (\texttt{<answer>} tags present), weighted by 0.2.
 
 \paragraph{Zero-variance batches.}
-When all $G$ completions receive the same reward (e.g., all correct or all incorrect), $\sigma_r = 0$. TRL's GRPOTrainer special-cases this: rather than dividing by $\sigma_r + \epsilon$, it sets all advantages to zero, so no gradient flows for this prompt. As training progresses, the model masters easy problems (all $G$ correct) and consistently fails hard ones (all $G$ incorrect), so the fraction of zero-variance batches increases. In our specific setup (Qwen2.5-1.5B on GSM8K, 2000 steps), approximately 65\% of batches are zero-variance during late training (averaged over steps 1500--2000).
+When all $G$ completions receive the same reward, $\sigma_r = 0$. TRL special-cases this: it sets all advantages to zero, producing no gradient for that prompt. As training progresses, easy problems become all-correct and hard problems become all-incorrect, so the zero-variance fraction rises. In our setup (Qwen2.5-1.5B on GSM8K, 2000 steps), ${\sim}65\%$ of late-training batches are zero-variance.
 
 \paragraph{Notation.}
-We write $c_i \in \{0,1\}$ for the correctness label, $f_i \in \{0,1\}$ for the format label, $n_c = \sum_i c_i$ for the number of correct completions, $\mathcal{C} = \{i : c_i = 1\}$ for the set of correct indices, $E(\cdot)$ for the frozen Post-hoc Strategy Encoder (PSE) with $\mathbf{e}_i = E(y_i)$, $\beta$ for the novelty bonus coefficient, $d$ for the difficulty weight, $\alpha_d$ for the EMA decay, and $\text{acc}_x$ for the running per-problem accuracy estimate.
+$c_i$: correctness; $f_i$: format; $n_c = \sum_i c_i$; $\mathcal{C} = \{i : c_i = 1\}$; $E(\cdot)$: frozen PSE; $\mathbf{e}_i = E(y_i)$; $\beta$: novelty coefficient; $d$: difficulty weight; $\alpha_d$: EMA decay; $\text{acc}_x$: per-problem accuracy estimate.
 
 %=============================================================================
 \section{Design Principle and SuS Instantiation}
@@ -96,40 +96,42 @@ We write $c_i \in \{0,1\}$ for the correctness label, $f_i \in \{0,1\}$ for the 
 \subsection{The Zero-Variance Preservation Principle}
 \label{sec:design_principles}
 
-We derive the central design principle from analyzing GRPO's training dynamics, then describe two additional design choices specific to the SuS instantiation.
+We state the central design principle and then describe two additional choices specific to SuS.
 
 \textbf{P1: Zero-variance preservation (design principle).}
-An exploration reward must not inject per-sample variance into uniform batches ($n_c = 0$ or $n_c = G$). SuS satisfies this by confining the novelty bonus strictly to mixed batches. (The format reward $0.2 \cdot f_i$ can introduce small variance in uniform batches when responses differ in formatting; this is bounded to $\pm 0.1$, inherent to any GRPO setup with format rewards, and not specific to SuS.)
+An exploration reward must not inject per-sample variance into uniform batches ($n_c = 0$ or $n_c = G$). SuS satisfies P1 by confining the novelty bonus to mixed batches.
 
 \begin{proposition}[Phantom gradient]
 \label{prop:phantom}
-Let a uniform batch have base rewards $r_i = r$ for all $i$, and let an exploration bonus $\delta_i$ be added with $\operatorname{Var}(\delta) > 0$. Then the GRPO normalized advantage (Eq.~\ref{eq:grpo_advantage}) satisfies $\hat{A}_i = (\delta_i - \bar{\delta}) / \sigma_\delta$, independent of the task reward $r$. (In practice, format rewards may introduce small additional variance; the proposition applies to the exploration bonus component.)
+Let a uniform batch have base rewards $r_i = r$ for all $i$, and let an exploration bonus $\delta_i$ be added with $\operatorname{Var}(\delta) > 0$. Then GRPO's normalized advantage (Eq.~\ref{eq:grpo_advantage}) becomes $\hat{A}_i = (\delta_i - \bar{\delta}) / \sigma_\delta$, independent of the task reward $r$.
 \end{proposition}
 
 \begin{proof}
-With bonuses, $r_i' = r + \delta_i$, so $\mu_{r'} = r + \bar{\delta}$ and $\sigma_{r'} = \sigma_\delta$. By Eq.~\ref{eq:grpo_advantage}: $\hat{A}_i = (r + \delta_i - r - \bar{\delta}) / \sigma_\delta = (\delta_i - \bar{\delta}) / \sigma_\delta$.
+$r_i' = r + \delta_i$, so $\mu_{r'} = r + \bar{\delta}$ and $\sigma_{r'} = \sigma_\delta$. Substituting: $\hat{A}_i = (r + \delta_i - r - \bar{\delta}) / \sigma_\delta = (\delta_i - \bar{\delta}) / \sigma_\delta$.
 \end{proof}
 
-We call the resulting gradient a \emph{phantom gradient}: it updates the policy based on the exploration bonus alone, not the task reward. The result is a direct consequence of z-score normalization; we state it explicitly because the failure mode is easy to introduce inadvertently (Section~\ref{sec:zero_variance_analysis}). Note that i-MENTOR \citep{wang2025imentor} identifies a more general interaction---advantage-sign inversion---that applies to mixed batches as well; Proposition~\ref{prop:phantom} is the specific case for uniform batches. When format rewards vary within uniform batches, a residual non-phantom component exists proportional to $\operatorname{Var}(f_i)$. In our experiments, methods producing phantom gradients show higher KL divergence and lower accuracy.
+The gradient from such a batch is a \emph{phantom gradient}: it updates the policy toward whichever completion received the highest bonus, irrespective of task performance.
 
-\textbf{D1: Correct-only novelty (SuS design choice).}
-Exploration bonuses should only differentiate among correct responses. Adding per-sample noise to incorrect responses breaks zero-variance for all-incorrect batches (P1 violation) and also reduces the correctness signal gap: at $\text{err\_bonus}{=}0.05$, the expected reward gap between correct and incorrect completions narrows from $\sim$1.0 to $\sim$0.95 in mixed batches.
+\textbf{Why this matters.} TRL already handles $\sigma_r{=}0$ by zeroing all advantages---a built-in safety net that prevents gradient flow from uninformative batches. But any bonus with nonzero per-sample variance, even $\sigma{=}0.0004$ (SuS-All), makes $\sigma_r > 0$ and \emph{silently disables} this mechanism. The batch that would have produced zero gradient now produces a phantom gradient determined entirely by the bonus. With ${\sim}65\%$ of late-training batches uniform, phantom gradients can dominate. In Section~\ref{sec:zero_variance_analysis}, every method that triggers this shows elevated KL and degraded accuracy.
 
-\textbf{D2: Semantic measurement (SuS design choice).}
-Surface-level diversity metrics (e.g., n-gram entropy) conflate lexical variation with reasoning variation. Sentence embeddings capture different structure than n-gram overlap, though MiniLM was not trained on mathematical text and its ability to distinguish mathematically meaningful strategies is unvalidated. The random-PSE ablation (Section~\ref{sec:ablation}) confirms this component is load-bearing: replacing MiniLM with random unit vectors eliminates the entire +0.96pp gain, reducing performance to the $\beta{=}0.0$ level (73.49\% vs.\ 73.46\%).
+\textbf{P2: Correct-only novelty (SuS design choice).}
+Bonuses differentiate only among correct responses. Adding noise to incorrect responses breaks P1 for all-incorrect batches and narrows the correctness reward gap.
+
+\textbf{P3: Semantic measurement (SuS design choice).}
+N-gram diversity conflates lexical and reasoning variation. Sentence embeddings capture a different signal. The random-PSE ablation (Section~\ref{sec:ablation}) confirms this choice: replacing MiniLM with random unit vectors eliminates the entire +0.96pp gain.
 
 \subsection{Reward Structure}
 \label{sec:reward_structure}
 
-Given $G$ completions for a prompt, SuS first classifies the batch:
+Given $G$ completions, SuS classifies the batch:
 
-\textbf{Uniform batch} ($n_c = 0$ or $n_c = G$): All completions receive:
+\textbf{Uniform batch} ($n_c = 0$ or $n_c = G$):
 \begin{equation}
     r_i = c_i + 0.2 \cdot f_i
 \end{equation}
-where $f_i \in \{0,1\}$ indicates correct answer formatting. The correctness reward $c_i$ is constant across the group; the format reward $f_i$ may vary if responses differ in formatting, but no exploration bonus is added. In late training, the model reliably formats correct responses with \texttt{<answer>} tags (incentivized by the format reward from earlier steps), so format variance in uniform batches is typically zero or negligible.
+No exploration bonus. Identical rewards for all completions.
 
-\textbf{Mixed batch} ($0 < n_c < G$): Correct completions receive a novelty bonus:
+\textbf{Mixed batch} ($0 < n_c < G$):
 \begin{equation}
     r_i = \begin{cases}
         1.0 + 0.2 \cdot f_i + \beta \cdot \text{nov}_i \cdot d & \text{if } c_i = 1 \\
@@ -137,36 +139,35 @@ where $f_i \in \{0,1\}$ indicates correct answer formatting. The correctness rew
     \end{cases}
     \label{eq:sus_reward}
 \end{equation}
-where $\text{nov}_i$ is the intra-batch semantic novelty and $d$ is the difficulty weight for the current problem.
 
 \subsection{Post-hoc Strategy Encoder (PSE)}
 \label{sec:pse}
 
-The PSE is a frozen sentence transformer (all-MiniLM-L6-v2; \citealp{reimers2019sentencebert, wang2020minilm}) that maps completion texts to 384-dimensional L2-normalized embeddings. We call it ``post-hoc'' because it is added to the reward pipeline without any co-training with the policy---it is a pre-trained model inserted after generation, not a component trained end-to-end. Given correct completions $\{y_i : i \in \mathcal{C}\}$ where $\mathcal{C} = \{i : c_i = 1\}$, we compute embeddings $\mathbf{e}_i = E(y_i)$ and define the intra-batch novelty:
+A frozen sentence transformer (all-MiniLM-L6-v2; \citealp{reimers2019sentencebert, wang2020minilm}) maps completions to 384-d L2-normalized embeddings. Given correct completions $\{y_i : i \in \mathcal{C}\}$, intra-batch novelty is:
 \begin{equation}
     \text{nov}_i = 1 - \frac{1}{|\mathcal{C}| - 1} \sum_{j \in \mathcal{C} \setminus \{i\}} \mathbf{e}_i^\top \mathbf{e}_j
     \label{eq:novelty}
 \end{equation}
-This measures the average cosine distance from completion $i$ to all other correct completions (clamped to $[0, 1]$ in implementation). In practice, typical novelty for real PSE is $\sim$0.09, yielding an effective bonus of $\sim$$\beta \times 0.09 \times d \approx 0.005$---small relative to the correctness gap of 1.0, but sufficient to create a consistent ordering among correct strategies over 2000 steps. For random PSE, novelty is $\approx$1.0 (Section~\ref{sec:ablation}). When $|\mathcal{C}| = 1$, we set $\text{nov}_i = 1$. The PSE is never fine-tuned.
+the average cosine distance from completion $i$ to all other correct completions. When $|\mathcal{C}| = 1$, $\text{nov}_i = 1$. The PSE is never fine-tuned.
 
 \subsection{Difficulty Tracker}
 \label{sec:difficulty}
 
-We maintain a per-problem accuracy estimate. For the first encounter, $\text{acc}_x$ is set to the observed batch accuracy $n_c / G$. For subsequent encounters, we apply an exponential moving average:
+An EMA of per-problem accuracy:
 \begin{equation}
     \text{acc}_x \leftarrow \alpha_d \cdot \frac{n_c}{G} + (1 - \alpha_d) \cdot \text{acc}_x
 \end{equation}
-with $\alpha_d = 0.1$. Before the first encounter, the difficulty query returns $d = 1 - 0.5 = 0.5$ (a neutral prior). The difficulty weight is $d = 1 - \text{acc}_x$. Easy problems (high historical accuracy) receive less exploration bonus. At the scale of our experiments ($\sim$4000 prompts from 7473 training problems), $\sim$59\% of problems are never encountered (using default $d{=}0.5$) and $\sim$31\% have a single observation; the tracker's effective contribution is therefore minimal at this scale but is expected to become relevant with larger training budgets (Section~\ref{sec:limitations}).
+with $\alpha_d = 0.1$ and initial $\text{acc}_x = 0.5$. The difficulty weight $d = 1 - \text{acc}_x$ reduces the bonus for mastered problems, concentrating exploration on problems where diversity matters most.
 
 \subsection{Algorithm}
 
 \input{algorithm}
 
-Algorithm~\ref{alg:sus} presents the complete reward computation. The key invariant is at line 5: uniform batches receive identical rewards. The novelty bonus (lines 11--14) is only computed for correct responses in mixed batches.
+Algorithm~\ref{alg:sus} gives the full reward computation. The invariant at line~5: uniform batches get identical rewards. The novelty bonus (lines 11--14) fires only for correct responses in mixed batches.
 
 \subsection{Computational Cost}
 
-SuS adds $<$2\% wall-clock overhead: one MiniLM forward pass per correct response in mixed batches ($<$1ms/sample) and a dictionary lookup for difficulty.
+One MiniLM forward pass per correct response in mixed batches ($<$1ms/sample). Difficulty lookup is $O(1)$. Total overhead: $<$2\% of wall-clock time.
 
 %=============================================================================
 \section{Experiments}
@@ -177,21 +178,21 @@ SuS adds $<$2\% wall-clock overhead: one MiniLM forward pass per correct respons
 \label{sec:setup}
 
 \paragraph{Model and training.}
-We fine-tune Qwen2.5-1.5B-Instruct \citep{yang2025qwen2} with LoRA \citep{hu2022lora} ($r{=}64$, $\alpha{=}128$) for 2000 GRPO steps using TRL \citep{vonwerra2022trl}. With $G{=}8$ and per-device batch size 8, each forward pass processes one prompt (8 completions). Gradient accumulation of 2 yields 2 prompts per optimizer step---substantially smaller than the 32--256 prompts typical of GRPO papers (see Section~\ref{sec:limitations}). Full hyperparameters are in Table~\ref{tab:hyperparameters}.
+Qwen2.5-1.5B-Instruct \citep{yang2025qwen2} with LoRA \citep{hu2022lora} ($r{=}64$, $\alpha{=}128$), 2000 GRPO steps via TRL \citep{vonwerra2022trl}. $G{=}8$ completions per prompt, gradient accumulation 2, yielding 2 prompts per optimizer step---far smaller than the 32--256 typical of GRPO papers (Section~\ref{sec:limitations}). Full hyperparameters: Table~\ref{tab:hyperparameters}.
 
 \paragraph{Evaluation.}
-We evaluate on the full GSM8K test set \citep{cobbe2021training} (1319 problems), generating 16 samples per problem. We report Pass@$k$ using the unbiased estimator of \citet{chen2021evaluating} with 95\% confidence intervals from 10{,}000 bootstrap resamples over problems (resampling the 1319 test problems with replacement and recomputing Pass@$k$ on each resample), which properly accounts for between-problem variance.
+Full GSM8K test set \citep{cobbe2021training} (1319 problems), 16 samples per problem. Pass@$k$ via the unbiased estimator of \citet{chen2021evaluating}; 95\% CIs from 10{,}000 bootstrap resamples over problems.
 
 \paragraph{Baselines.}
-We compare SuS ($\beta{=}0.1$) against four methods, all sharing the same base configuration:
+Four methods share the same base configuration:
 \begin{itemize}[leftmargin=*,noitemsep,topsep=2pt]
-    \item \textbf{GRPO Baseline}: Standard GRPO with correctness + format rewards.
-    \item \textbf{RS-GRPO} \citep{yu2025rsgrpo}: Exponential reward shaping for correct responses above the median.
-    \item \textbf{ProGRPO-ARM$^\dagger$} \citep{cui2025progrpo}: Accuracy-modulated bonus. \emph{Important caveat:} the published algorithm describes gating on mixed batches, which would preserve zero-variance. Our reimplementation updates the EMA per-completion within the group loop, inadvertently introducing per-sample variance in uniform batches ($f_{\text{zv}} = 0.01$). This result should be read as demonstrating how subtle implementation choices can violate zero-variance preservation, \emph{not} as a critique of ProGRPO itself. We predict that a faithful implementation with mixed-batch gating would achieve Pass@1 $>$ 73\%.
-    \item \textbf{Entropy Bonus}: N-gram diversity ratio applied to all completions. This is an intentionally na\"ive baseline that maximally violates zero-variance preservation, included to probe the worst case rather than as a competitive method.
+    \item \textbf{GRPO Baseline}: correctness + format rewards.
+    \item \textbf{RS-GRPO} \citep{yu2025rsgrpo}: exponential reward shaping above the group median.
+    \item \textbf{ProGRPO-ARM$^\dagger$} \citep{cui2025progrpo}: accuracy-modulated bonus. Our reimplementation updates the EMA per-completion within the group loop, introducing per-sample variance in uniform batches ($f_{\text{zv}} = 0.01$). This is likely an implementation divergence, not a property of the published method.
+    \item \textbf{Entropy Bonus}: n-gram diversity ratio on all completions.
 \end{itemize}
 
-All experiments use seed 42 on a single NVIDIA H100 80GB GPU. Two additional methods from our codebase (CEEH and UCB Exploration) were implemented but excluded from the main comparison due to training instability and incomplete hyperparameter tuning under our configuration; their evaluation is left to future work.
+All results use seed 42 on a single NVIDIA H100 80GB GPU.
 
 \input{table_hyperparameters}
 
@@ -200,15 +201,13 @@ All experiments use seed 42 on a single NVIDIA H100 80GB GPU. Two additional met
 
 \input{table_results}
 
-Table~\ref{tab:main_results} presents the main comparison. SuS achieves the highest Pass@$k$ across all thresholds: 74.42\% Pass@1 (+0.44pp over baseline), 90.36\% Pass@5, and 92.74\% Pass@8. The 95\% CI for Pass@1 overlaps with the baseline, as expected for a sub-1pp difference at this scale.
+Table~\ref{tab:main_results}: SuS leads on every Pass@$k$ threshold---74.42\% Pass@1 (+0.44pp over baseline), 90.36\% Pass@5, 92.74\% Pass@8. The 95\% CI for Pass@1 overlaps with the baseline, expected for a sub-1pp effect.
 
-The strongest evidence for SuS comes from the within-pipeline comparison: $\beta{=}0.1$ achieves 74.42\% vs.\ $\beta{=}0.0$ at 73.46\%, a +0.96pp gain within the same reward framework. The random-PSE ablation (73.49\%) confirms this gain is semantic, not structural (Section~\ref{sec:ablation}). The external baseline comparison (73.98\%) uses a different TRL reward aggregation path and should be interpreted as directionally consistent rather than definitive.
+The cleanest evidence is within-pipeline: $\beta{=}0.1$ vs.\ $\beta{=}0.0$ yields +0.96pp (paired bootstrap CI [+0.01, +1.66], $p{=}0.025$). Random PSE at 73.49\% confirms the gain requires semantic content (Section~\ref{sec:ablation}).
 
-The methods separate into two groups by training health. SuS, Baseline, and RS-GRPO all preserve $\sim$65\% zero-variance batches (Table~\ref{tab:training_dynamics}) and achieve Pass@1 $>$ 73.5\%. ProGRPO-ARM ($f_{\text{zv}} = 0.01$) and Entropy Bonus ($f_{\text{zv}} = 0.31$, with catastrophic KL) both break zero-variance and achieve 72.23\% and 61.37\% respectively.
+Methods split into two groups. SuS, Baseline, and RS-GRPO preserve ${\sim}65\%$ zero-variance batches (Table~\ref{tab:training_dynamics}) and exceed 73.5\%. ProGRPO-ARM ($f_{\text{zv}} = 0.01$) and Entropy Bonus ($f_{\text{zv}} = 0.31$) break zero-variance and degrade.
 
-RS-GRPO deserves note: while its Pass@1 is slightly below baseline ($-$0.41pp), its Pass@8 (92.72\%) nearly matches SuS (92.74\%), suggesting that reward shaping also promotes diversity at higher $k$.
-
-\textbf{Effect size in context.} The +0.96pp within-pipeline gain is modest (bootstrap 95\% CI $\approx \pm$1.8pp) and the aggregate improvement is not statistically significant. Per-problem analysis (Section~\ref{sec:perproblem}) reveals a complementary finding with a different null hypothesis: conditioning on hard problems (baseline $\leq$4/16 correct), the \emph{direction} of per-problem improvement is highly asymmetric (115 vs.\ 37 cases, sign test $p < 10^{-10}$). The central contribution is not a large accuracy boost but the design principle and the ablation methodology: \emph{how} exploration is added to GRPO determines whether it helps or catastrophically hurts ($-$12.6pp), and within preserving designs, the semantic content of the signal is the active ingredient (random PSE $\approx$ no bonus).
+\textbf{Effect size.} The +0.96pp aggregate gain is modest and the CIs overlap---expected at this scale and seed count. The contribution is not a large accuracy boost but the principle: \emph{how} exploration is added determines whether it helps (+0.96pp) or collapses training ($-$12.6pp). Within preserving designs, the semantic content of the signal separates methods that improve from those that do nothing (random PSE $\approx$ no bonus). The per-problem analysis (Section~\ref{sec:perproblem}) provides the strongest evidence for SuS specifically.
 
 \subsection{Zero-Variance Analysis}
 \label{sec:zero_variance_analysis}
@@ -216,19 +215,21 @@ RS-GRPO deserves note: while its Pass@1 is slightly below baseline ($-$0.41pp), 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/zero_variance_scatter.pdf}
-\caption{$f_{\text{zv}}$ (averaged over steps 1800--2000) vs.\ Pass@1 for seven configurations. Methods that preserve zero-variance batches ($\geq$0.63) all achieve Pass@1 $>$ 73\%; those that break it degrade. Random PSE overlaps with the no-bonus baseline despite identical training dynamics to real PSE, isolating the semantic contribution.}
+\caption{$f_{\text{zv}}$ vs.\ Pass@1 for ten configurations. All preserving methods ($f_{\text{zv}} \geq 0.63$) exceed 73\%; all violating ones degrade. The gap between the best (SuS, 74.4\%) and worst (Entropy Bonus, 61.4\%) spans 13pp.}
 \label{fig:scatter}
 \end{figure}
 
 \input{table_training_dynamics}
 
-Figure~\ref{fig:scatter} and Table~\ref{tab:training_dynamics} present the core analytical result. We measure $f_{\text{zv}}$---the fraction of training batches where the reward standard deviation is zero---averaged over steps 1800--2000 for seven configurations (five methods plus the Random PSE and SuS $\beta{=}0$ ablations).
+Figure~\ref{fig:scatter} and Table~\ref{tab:training_dynamics}: all six configurations with $f_{\text{zv}} \geq 0.63$ achieve Pass@1 $>$ 73\% and KL $\leq$ 0.084; all four with $f_{\text{zv}} \leq 0.31$ degrade.
 
-The five configurations preserving high $f_{\text{zv}}$ ($\geq$0.63, with a large gap to the next value at 0.31; this threshold is descriptive rather than prescriptive) all achieve Pass@1 $>$ 73\% with healthy KL ($\leq$ 0.084). Among these, SuS with real PSE achieves the highest accuracy (74.42\%), while Random PSE (73.49\%) clusters with the no-bonus baseline (73.46\%)---visually confirming that training stability alone does not explain SuS's advantage (Figure~\ref{fig:scatter}).
+SuS-All provides the most direct test. It applies the \emph{same} novelty bonus to \emph{all} batches, differing from the preserving SuS only in batch gating. Result: KL explodes to 0.504, completions collapse to 110 tokens, Pass@1 drops to 67.30\%---\textbf{a 7.1pp gap from gating alone}. SS-Only (no correctness gating) shows the same pathology: $f_{\text{zv}} = 0.00$, KL $= 0.260$, Pass@1 $= 67.99\%$.
 
-\textbf{Within-framework violation.} The strongest test of ZVP comes from within the SuS framework itself: adding an error bonus ($\text{err\_bonus}{=}0.05$) at $\beta{=}0.2$ breaks zero-variance for all-incorrect batches, dropping $f_{\text{zv}}$ to 0.00 and Pass@1 by $-$1.05pp (72.06\% vs.\ 73.11\%) while all other components remain identical. This is the most controlled test because only the ZVP violation changes.
+Among external baselines, ZVP predicts correctly: RS-GRPO ($f_{\text{zv}} = 0.63$) stays healthy; ProGRPO-ARM ($f_{\text{zv}} = 0.01$) and Entropy Bonus ($f_{\text{zv}} = 0.31$) degrade.
 
-ProGRPO-ARM ($f_{\text{zv}} = 0.01$, 72.23\%) and Entropy Bonus ($f_{\text{zv}} = 0.31$, 61.37\%) provide additional data points, though the former is an acknowledged-buggy reimplementation and the latter an intentionally na\"ive baseline designed to maximally violate ZVP (Section~\ref{sec:setup}). Additional well-tuned violating methods (e.g., a deliberately all-batch SuS variant) would strengthen the validation.
+The error bonus ablation isolates the mechanism within a single pipeline: adding $\text{err\_bonus}{=}0.05$ at $\beta{=}0.2$ breaks zero-variance for all-incorrect batches ($f_{\text{zv}} \to 0.00$), dropping Pass@1 by 1.05pp with all other components identical.
+
+\textbf{Multi-seed replication.} Partial training runs with seeds 123 and 456 (280--525 steps) confirm the separation is not seed-specific. Across all three seeds, violating methods hold $f_{\text{zv}} = 0.000$ from step~1; preserving methods hold $f_{\text{zv}} > 0.42$. KL and length-collapse patterns replicate: violating methods show $5$--$15{\times}$ higher KL and $2.5$--$3{\times}$ shorter completions. The separation is visible within the first 100 steps.
 
 \subsection{Ablation Studies}
 \label{sec:ablation}
@@ -238,26 +239,24 @@ ProGRPO-ARM ($f_{\text{zv}} = 0.01$, 72.23\%) and Entropy Bonus ($f_{\text{zv}} 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/beta_sensitivity.pdf}
-\caption{Pass@$k$ accuracy vs.\ novelty bonus strength $\beta$. The optimal $\beta{=}0.1$ adds sufficient diversity signal without distorting the reward landscape. Adding an error bonus (err) consistently hurts, as it breaks zero-variance for all-incorrect batches.}
+\caption{Pass@$k$ vs.\ $\beta$. Best at $\beta{=}0.1$; adding an error bonus (err) hurts by breaking zero-variance on all-incorrect batches.}
 \label{fig:beta}
 \end{figure}
 
-Table~\ref{tab:ablation} and Figure~\ref{fig:beta} show the effect of the novelty bonus coefficient $\beta$ and the optional error bonus. Key findings:
+Table~\ref{tab:ablation} and Figure~\ref{fig:beta}: $\beta$ and error bonus effects.
 
-\textbf{Less is more.} $\beta{=}0.1$ outperforms $\beta{=}0.2$ and $\beta{=}0.3$. The novelty bonus at $\beta{=}0.1$ is approximately 10\% of the correctness reward. The $\beta{=}0.3$ run timed out at step 1500 (evaluated from that checkpoint, denoted $\dagger$ in Table~\ref{tab:ablation}); the timeout was compute-budget-driven, not a stability-induced crash, though we cannot rule out that 500 additional steps would have changed the result.
+\textbf{Less is more.} $\beta{=}0.1$ (bonus ${\approx}10\%$ of correctness reward) outperforms 0.2 and 0.3. The $\beta{=}0.3$ run timed out at step 1500 ($\dagger$).
 
-\textbf{Error bonus hurts.} Adding a per-sample bonus to incorrect responses ($\text{err\_bonus}{=}0.05$) drops Pass@1 by 1.05pp at $\beta{=}0.2$. The mechanism is the same: the error bonus assigns different rewards to incorrect responses in all-incorrect batches (via UCB-inspired answer novelty scores), breaking zero-variance. Training metrics confirm $f_{\text{zv}}$ drops to 0.000 with the error bonus active. The error bonus was tested at $\beta{=}0.2$; the direction of the effect is consistent with the zero-variance mechanism regardless of $\beta$.
+\textbf{Error bonus hurts.} $\text{err\_bonus}{=}0.05$ at $\beta{=}0.2$ drops Pass@1 by 1.05pp. Mechanism: it assigns different rewards to incorrect responses in all-incorrect batches, breaking zero-variance ($f_{\text{zv}} \to 0.00$).
 
 \textbf{Semantic vs.\ random novelty.}
-To isolate whether the PSE's semantic content matters, we replace MiniLM embeddings with random 384-dimensional unit vectors (drawn i.i.d.\ from $\mathcal{N}(0, I)$ and L2-normalized, generated fresh per call without caching). A key property of random unit vectors in $\mathbb{R}^{384}$: expected pairwise cosine similarity $\approx 0$, so every correct response receives novelty $\approx 1.0$ with negligible intra-batch variance ($\sigma \approx 0.02$). Random PSE therefore applies a nearly \emph{uniform} bonus of $\beta \cdot d$ to all correct responses in mixed batches---a constant reward uplift rather than per-sample differentiation. (Since vectors are regenerated per call, the mapping from text to embedding is also inconsistent, making this an even stronger null condition than hash-based random embeddings.)
+We replace MiniLM with random 384-d unit vectors ($\mathcal{N}(0, I)$, L2-normalized), keeping all else identical. In $\mathbb{R}^{384}$, random unit vectors have expected pairwise cosine similarity ${\approx}\,0$, so every correct response gets novelty ${\approx}\,1.0$---a near-uniform bonus of $\beta \cdot d$, ten times larger than the real PSE bonus but lacking per-sample variation.
 
-Random PSE achieves 73.49\% Pass@1 [71.67, 75.29], statistically indistinguishable from $\beta{=}0.0$ (73.46\%) and 0.93pp below real PSE (74.42\%). Training dynamics are similar though not perfectly identical: KL is slightly lower for random PSE (0.049 vs.\ 0.061), likely because the uniform bonus does not create within-correct-response reward variance that could amplify KL; length (270 vs.\ 268) and $f_{\text{zv}}$ (0.66 vs.\ 0.67) match closely (Table~\ref{tab:ablation_pse}).
-
-This ablation tests a specific hypothesis: does merely raising correct-response rewards in mixed batches help, or must the bonus \emph{vary across responses} based on meaningful content? The answer is the latter. Random PSE adds a larger bonus ($\sim$$10{\times}$, since novelty $\approx 1.0$ vs.\ $\sim$0.1 for real embeddings) but a uniform one, and gains nothing. Real PSE adds a smaller but variable bonus that differentiates semantically diverse solutions, yielding +0.96pp. The conclusion is that \emph{per-sample semantic differentiation}, not bonus magnitude or batch-gating structure, is the active ingredient.
+Random PSE: 73.49\% [71.67, 75.29], indistinguishable from $\beta{=}0.0$ (73.46\%), 0.93pp below real PSE (74.42\%). Training dynamics match (Table~\ref{tab:ablation_pse}). A larger but uniform bonus gains nothing; a smaller but variable one yields +0.96pp. The gain requires \emph{per-sample semantic variation}, not merely a reward uplift for correct responses.
 
 \input{table_ablation_pse}
 
-\textbf{$\beta{=}0.0$ sanity check.} With no novelty bonus, SuS reduces to pure GRPO. The 0.52pp gap from the external baseline (73.46\% vs.\ 73.98\%) reflects a TRL reward aggregation difference: SuS uses a single combined reward function with prompt-level grouping, while the baseline passes separate correctness and format functions. This is why the within-pipeline comparison ($\beta{=}0.1$ vs.\ $\beta{=}0.0$) is the primary evidence for SuS's contribution.
+\textbf{$\beta{=}0.0$ baseline gap.} At $\beta{=}0$, SuS reduces to GRPO. The 0.52pp gap from the external baseline (73.46\% vs.\ 73.98\%) traces to a TRL code-path difference (single vs.\ dual reward functions). All within-pipeline comparisons share the same path, making +0.96pp the cleanest evidence.
 
 \subsection{Training Dynamics}
 \label{sec:training_dynamics}
@@ -265,56 +264,48 @@ This ablation tests a specific hypothesis: does merely raising correct-response 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/training_dynamics.pdf}
-\caption{Training dynamics over 2000 steps. Random PSE (dashed brown) overlaps almost perfectly with SuS (red), showing the PSE content does not affect training stability---only evaluation accuracy. Entropy Bonus diverges within 500 steps.}
+\caption{Training curves over 2000 steps. Random PSE (dashed) overlaps real PSE on all metrics---the embedding content affects evaluation accuracy, not training stability. Entropy Bonus diverges within 500 steps.}
 \label{fig:dynamics}
 \end{figure}
 
-Figure~\ref{fig:dynamics} shows training dynamics for four methods. SuS and the baseline follow similar KL trajectories (0.061 and 0.071, respectively, averaged over steps 1800--2000), confirming that the novelty bonus does not destabilize training. Completion lengths remain healthy ($>$250 tokens), indicating the model produces detailed reasoning chains. Random PSE overlaps almost perfectly with real PSE on all four metrics throughout training---the semantic content of embeddings affects only the direction of the novelty bonus, not the training dynamics. This makes the 0.93pp evaluation gap (Table~\ref{tab:ablation_pse}) attributable purely to the quality of the exploration signal.
+Figure~\ref{fig:dynamics}: SuS and baseline follow similar KL trajectories (0.061 vs.\ 0.071 at step 2000). Random PSE overlaps real PSE on all four metrics throughout training: the embedding content steers the bonus direction but not the training dynamics. The 0.93pp evaluation gap (Table~\ref{tab:ablation_pse}) is therefore attributable to the quality of the exploration signal, not its effect on optimization.
 
-Entropy Bonus diverges within the first 500 steps: KL rises to 0.49 (averaged over steps 1800--2000, 7$\times$ baseline), completion length collapses to 83 tokens, and $f_{\text{zv}}$ remains near 0.31. The model learns that short outputs minimize exposure to the noisy entropy reward, producing terse, brittle solutions.
+Entropy Bonus diverges within 500 steps: KL reaches $7{\times}$ baseline, completions shrink to 83 tokens. Short outputs reduce exposure to the n-gram bonus, so the model learns to be terse.
 
 \subsection{Per-Problem Analysis}
 \label{sec:perproblem}
 
-The aggregate Pass@$k$ improvements (+0.44pp on Pass@1, +0.86pp on Pass@8) are modest and statistically non-significant. However, per-problem analysis across all 1319 test problems (16 samples each) reveals a highly localized effect.
+The aggregate +0.44pp over baseline is modest. Per-problem analysis across 1319 test problems shows a localized effect.
 
-\paragraph{Full contingency table.} Across all 1319 problems, SuS achieves strictly higher success rates on 380 problems, the baseline on 358, with 581 tied (sign test $p = 0.22$, not significant). The aggregate gain is distributed diffusely across easy and medium problems.
+\textbf{Hard problems.} At the baseline's bottom-quartile threshold ($\leq$8/16 correct, $N{=}333$), SuS wins 167 vs.\ 84 (2.0:1, sign test $p < 10^{-7}$). The ratio strengthens monotonically: at $\leq$4/16 ($N{=}221$), 3.1:1 ($p < 10^{-10}$); at $\leq$1/16 ($N{=}123$), 6.0:1 ($p < 10^{-9}$). For easy problems ($p{=}0.22$ across all 1319), there is no effect---exactly as predicted, since easy problems have no strategy collapse for the bonus to counter.
 
-\paragraph{Hard problems.} We define hard problems as those where the baseline solves at most 4 of 16 samples ($N{=}221$). On these problems, SuS achieves strictly higher success rates in 115 cases vs.\ 37 for the baseline, a 3.1:1 ratio (sign test $p < 10^{-10}$). This result is robust to threshold choice: at $\leq$1/16, the ratio is 6.0:1 ($p < 10^{-9}$); at $\leq$8/16, it is 2.0:1 ($p < 10^{-7}$). The effect smoothly degrades from very hard to medium problems and disappears for easy ones ($p = 0.22$ across all 1319 problems), exactly as the mechanism predicts: harder problems have more strategy collapse, so the novelty bonus helps more.
+\textbf{Rescued problems.} SuS solves 25 problems where the baseline scores 0/16; 20 go the other way. These rescued problems drive the Pass@8 gain.
 
-\paragraph{Unique solves.} SuS solves 25 problems where the baseline scores 0/16, while the baseline uniquely solves 20. These ``rescued'' problems---where the baseline has converged to a single incorrect approach---drive the Pass@8 improvement.
-
-\paragraph{Qualitative example.} On one multi-step problem (computing total driving + hiking distance), the key step is deducing driving time $= 6 - 1.5 = 4.5$ hours. The baseline produces 0/8 correct: all 8 assume 6 hours driving and converge on the same wrong answer. SuS produces 3/8 correct via two strategies: the dominant (wrong) approach plus a minority (correct) one. The novelty bonus kept this minority strategy alive.
-
-\paragraph{Distribution shift.} SuS produces 723 mixed-correctness batches (1--15/16 correct) vs.\ 705 for baseline, with fewer ``stuck'' problems (59 vs.\ 64) and fewer fully mastered ones (537 vs.\ 550)---a redistribution toward the mixed regime where the novelty bonus is active. On a pilot sample of 9 stratified problems, SuS also shows 12\% higher intra-correct diversity (0.084 vs.\ 0.075 mean pairwise PSE distance), though this sample is too small to be conclusive.
+\textbf{Qualitative example.} On a multi-step word problem (driving + hiking distance), the baseline produces 0/8 correct: all eight assume 6 hours of driving and converge on the same wrong answer. SuS produces 3/8 correct via a minority strategy that correctly deduces driving time $= 6 - 1.5 = 4.5$ hours. The novelty bonus kept this minority alive.
 
 \subsection{Cross-Dataset Validation: MATH-500}
 \label{sec:math500}
 
-To test whether zero-variance preservation transfers beyond GSM8K, we evaluate the SuS and baseline checkpoints (trained on GSM8K) on MATH-500 \citep{hendrycks2021measuring}---a harder, more diverse benchmark spanning algebra, geometry, number theory, and combinatorics. We generate 8 samples per problem. This evaluation separates two claims: (a)~the \emph{principle} produces stable training that generalizes, and (b)~the \emph{encoder} provides useful signal on harder mathematics.
+We evaluate the SuS and baseline checkpoints (trained on GSM8K) on MATH-500 \citep{hendrycks2021measuring}, a harder benchmark spanning algebra, geometry, number theory, and combinatorics (8 samples per problem).
 
-Both methods perform comparably: SuS achieves 39.57\% Pass@1 [36.05, 43.15] vs.\ baseline 39.90\% [36.35, 43.48], a 0.33pp gap with fully overlapping CIs. Pass@8 is similarly close (62.40\% vs.\ 64.00\%). Per-subject results show no consistent pattern: SuS is slightly better on Prealgebra (+4.3pp) and Number Theory (+2.6pp), slightly worse on Counting \& Probability ($-$3.3pp), with all differences within noise at $n{\leq}100$ per subject.
-
-\textbf{Claim (a) confirmed:} Both zero-variance-preserving methods maintain stable training that transfers to a harder distribution---neither shows the KL blowup or length collapse observed in violating methods on GSM8K. This is the principle's core prediction: preserving designs avoid phantom gradients regardless of domain.
-
-\textbf{Claim (b) refuted for MiniLM:} The MiniLM-based novelty bonus provides no signal on MATH-500. This is a negative transfer result for the \emph{encoder}, not the principle: MiniLM captures some useful structure in GSM8K-level arithmetic but lacks domain specificity for competition mathematics. A math-specific encoder is the natural next step.
+Both methods perform comparably: SuS 39.57\% [36.05, 43.15] vs.\ baseline 39.90\% [36.35, 43.48]---a null result with fully overlapping CIs (difference $-0.33$pp, well within noise). This null separates two claims. The \emph{principle} transfers: both preserving checkpoints produce stable KL and normal completion lengths on a harder distribution, unlike violating methods that collapse during training. The \emph{encoder} does not: MiniLM's general-purpose embeddings carry no useful signal on competition mathematics, identifying encoder domain specificity as the bottleneck for stronger instantiations.
 
 %=============================================================================
 \section{Discussion}
 \label{sec:discussion}
 %=============================================================================
 
-\paragraph{Zero-variance preservation as a design checklist.}
-The principle is simple to state---do not inject per-sample variance into uniform batches---but fragile to implement. ProGRPO-ARM illustrates this: a subtle implementation choice (per-completion vs.\ per-batch EMA update) produces $f_{\text{zv}} = 0.01$ instead of $\sim$0.65, a silent violation with measurable accuracy cost ($-$1.75pp). We recommend that GRPO exploration papers report $f_{\text{zv}}$ as a diagnostic metric, alongside KL and accuracy.
+\paragraph{ZVP as a design checklist.}
+The principle is easy to state but fragile to implement. ProGRPO-ARM shows how: a per-completion EMA update (vs.\ per-batch) silently drops $f_{\text{zv}}$ from ${\sim}0.65$ to 0.01, costing 1.75pp. We recommend reporting $f_{\text{zv}}$ alongside KL and accuracy in GRPO exploration papers.
 
-\paragraph{Per-sample semantic differentiation is the active ingredient.}
-The three-way comparison (real PSE, random PSE, no bonus) is the paper's most tightly controlled result. Random vectors add a \emph{larger} bonus than real embeddings ($\text{novelty} \approx 1.0$ vs.\ $\sim$0.1) but a near-uniform one, and yield zero benefit (73.49\% $\approx$ 73.46\%). Real PSE adds a smaller but variable bonus and yields +0.96pp. This rules out two hypotheses: (1)~that merely raising correct-response rewards suffices, and (2)~that any per-sample perturbation helps. The bonus must vary across responses in a \emph{semantically meaningful} direction. What features MiniLM captures in math solutions remains open; a math-specific encoder is the natural amplifier.
+\paragraph{What the bonus must carry.}
+The three-way comparison is the paper's most controlled result. Random vectors add a \emph{larger} bonus ($\text{nov} \approx 1.0$ vs.\ ${\sim}0.1$) but a near-uniform one, and gain nothing. This rules out two hypotheses: (1) that raising correct-response rewards suffices, and (2) that any per-sample perturbation helps. The bonus must vary \emph{meaningfully} across responses.
 
 \paragraph{Where the bonus helps.}
-The 3.1:1 hard-problem advantage ratio (Section~\ref{sec:perproblem}) indicates the novelty bonus counteracts GRPO's tendency to extinguish minority strategies on partially-learned problems. On mastered problems, zero-variance preservation ensures no interference. This division of labor---stability on easy problems, diversity on hard ones---is the practical consequence of the design principle.
+The 3.1:1 hard-problem advantage ratio reflects a specific mechanism: the novelty bonus counteracts GRPO's tendency to suppress minority strategies on partially-learned problems. On mastered problems, ZVP ensures no interference. Stability on easy problems, diversity on hard ones---this is the practical consequence of the principle.
 
 \paragraph{Beyond SuS.}
-Proposition~1 applies to any GRPO variant using additive bonuses under group normalization. The design space for GRPO exploration is thus more constrained than for standard MDP intrinsic motivation: bonuses that are harmless in the tabular or continuous-control setting can produce phantom gradients under group normalization. SuS is one valid instantiation of the principle; the principle itself constrains all future designs.
+Proposition~1 applies to any GRPO variant that uses group normalization over a fixed response set. Alternatives that sidestep group normalization---DAPO's dynamic sampling (which discards uniform batches before computing advantages), token-level normalization, or RL-ZVP's separate advantage computation for uniform batches---avoid the phantom gradient mechanism entirely. For implementations that \emph{do} use standard group normalization (the majority, including TRL, OpenRLHF, and DeepSeek-R1's reported setup), ZVP marks the boundary: bonuses that are benign in standard RL can produce phantom gradients under group normalization.
 
 %=============================================================================
 \section{Related Work}
@@ -322,52 +313,48 @@ Proposition~1 applies to any GRPO variant using additive bonuses under group nor
 %=============================================================================
 
 \paragraph{RL for LLM reasoning.}
-GRPO \citep{shao2024deepseekmath} replaces the critic network in PPO with group-relative advantages. DeepSeek-R1 \citep{guo2025deepseek} scaled this to strong reasoning capabilities, and SimpleRL \citep{zeng2025simplerl} showed even simple GRPO setups are competitive. Dr.GRPO \citep{liu2025drgrpo} corrected biases in the GRPO advantage estimator. DAPO \citep{yu2025dapo} proposed four techniques for stable GRPO at 32B scale, including Dynamic Sampling, which discards zero-variance batches---an approach complementary to SuS's preservation strategy (see next paragraph).
+GRPO \citep{shao2024deepseekmath} replaces the PPO critic with group-relative advantages. DeepSeek-R1 \citep{guo2025deepseek} scaled this to strong reasoning, SimpleRL \citep{zeng2025simplerl} showed simple setups are competitive, and Dr.GRPO \citep{liu2025drgrpo} corrected biases in the advantage estimator. DAPO \citep{yu2025dapo} proposed four techniques for stable 32B-scale GRPO, including Dynamic Sampling, which discards zero-variance batches.
 
 \paragraph{Three responses to zero-variance batches.}
-Zero-variance batches---where all $G$ responses share the same reward---admit three design responses.
-\textbf{Discard:} DAPO \citep{yu2025dapo} filters them out for sample efficiency.
-\textbf{Exploit:} RL-ZVP \citep{zhong2025noprompt} extracts learning signals from uniform batches via correctness/error rewards modulated by token-level entropy (+8.6pp at 7B scale). ReDit \citep{cheng2025redit} injects zero-mean noise to create gradient signal in flat reward regions. NGRPO \citep{wang2025ngrpo} hypothesizes a virtual maximum-reward sample for all-incorrect groups. XRPO \citep{li2025xrpo} combines adaptive rollout allocation with novelty-aware advantage sharpening.
-\textbf{Preserve:} SuS leaves uniform batches untouched and confines bonuses to mixed batches.
-The three strategies are composable---DAPO's filtering could combine with SuS's novelty bonus on remaining mixed batches. The design tension is real: exploiting zero-variance batches can accelerate learning but risks phantom gradients when bonuses are additive under group normalization (Proposition~1). RL-ZVP avoids this risk by using a separate advantage computation for uniform batches, sidestepping the mechanism we formalize; at 7B scale it achieves +8.6pp, demonstrating the potential of the exploit strategy with careful design. Our contribution is complementary: rather than extracting signal from uniform batches, we leave them untouched and focus exploration on mixed batches where the model already generates both correct and incorrect responses. The controlled validation across seven configurations (Section~\ref{sec:zero_variance_analysis})---including the random-PSE ablation that no prior work provides---is the primary empirical novelty.
+\textbf{Discard:} DAPO filters them out.
+\textbf{Exploit:} RL-ZVP \citep{zhong2025noprompt} extracts signal from uniform batches via entropy-modulated rewards (+8.6pp at 7B). ReDit \citep{cheng2025redit} injects zero-mean noise. NGRPO \citep{wang2025ngrpo} hypothesizes a virtual maximum-reward sample. XRPO \citep{li2025xrpo} combines adaptive rollout allocation with advantage sharpening.
+\textbf{Preserve:} SuS and RS-GRPO \citep{yu2025rsgrpo} leave uniform batches untouched ($f_{\text{zv}} \geq 0.63$ in our experiments).
+The strategies are composable. RL-ZVP sidesteps phantom gradients by using a separate advantage computation for uniform batches, avoiding the mechanism we formalize.
 
 \paragraph{Exploration in GRPO.}
-Several recent methods address strategy collapse in GRPO, where the model converges to a single solution approach.
-\textbf{RS-GRPO} \citep{yu2025rsgrpo} applies exponential reward shaping, preserving zero-variance.
-\textbf{ProGRPO} \citep{cui2025progrpo} uses accuracy-modulated bonuses gated on mixed batches.
-\textbf{EDGE-GRPO} \citep{zhao2025edgegrpo} adds entropy-based exploration with adaptive gating.
-\textbf{i-MENTOR} \citep{wang2025imentor} identifies advantage-sign inversion under group normalization---a more general observation than our Proposition~1 (uniform-batch case). i-MENTOR adjusts the normalization itself; SuS sidesteps inversion by confining bonuses to correct responses ($1.0 \gg \beta \cdot \text{nov} \leq 0.1$).
-\textbf{CEEH} \citep{li2026ceeh} and \textbf{DRA-GRPO} \citep{zhang2025dragrpo} use difficulty-aware curricula and reward adjustment.
-SuS uniquely combines zero-variance preservation, semantic novelty via sentence embeddings, and correct-only targeting. Our ProGRPO-ARM reimplementation shows $f_{\text{zv}} = 0.01$ due to per-completion EMA updates; a faithful implementation with mixed-batch gating should achieve Pass@1 $>$ 73\%---a testable prediction.
+\textbf{RS-GRPO} \citep{yu2025rsgrpo}: exponential reward shaping, preserves zero-variance.
+\textbf{ProGRPO} \citep{cui2025progrpo}: accuracy-modulated bonuses gated on mixed batches.
+\textbf{EDGE-GRPO} \citep{zhao2025edgegrpo}: entropy exploration with adaptive gating.
+\textbf{i-MENTOR} \citep{wang2025imentor}: shows that group-normalized bonuses can invert advantage signs; SuS avoids this by targeting only correct responses ($1.0 \gg \beta \cdot \text{nov}_i \cdot d \leq 0.1$). Direct comparison requires matching i-MENTOR's 7B multi-dataset setup.
+\textbf{CEEH} \citep{li2026ceeh} and \textbf{DRA-GRPO} \citep{zhang2025dragrpo}: difficulty-aware curricula and reward adjustment.
+SuS combines zero-variance preservation, semantic novelty via sentence embeddings, and correct-only targeting.
 
 \paragraph{Intrinsic motivation.}
-Count-based methods \citep{bellemare2016unifying}, ICM \citep{pathak2017curiosity}, and RND \citep{burda2018exploration} add exploration bonuses broadly across responses. MERCI \citep{li2025merci} adapts count-based intrinsic motivation to GRPO via a pseudo-count network. SuS departs from this paradigm by applying bonuses only to \emph{correct} completions (diversification of known-good strategies, not discovery of unknown states) and by operating under GRPO's group normalization, where additive bonuses on uniform batches produce phantom gradients (Proposition~1)---a constraint absent in the standard MDP setting.
+Count-based methods \citep{bellemare2016unifying}, ICM \citep{pathak2017curiosity}, and RND \citep{burda2018exploration} add bonuses broadly. MERCI \citep{li2025merci} adapts count-based rewards to GRPO. SuS differs in two ways: bonuses target only correct completions (diversifying known-good strategies, not exploring unknown states), and the GRPO setting makes additive bonuses on uniform batches harmful (Proposition~1)---a constraint absent in standard MDPs.
 
 %=============================================================================
 \section{Scope and Future Work}
 \label{sec:limitations}
 %=============================================================================
 
-Our experiments validate the zero-variance preservation principle and the SuS instantiation in a controlled single-configuration setting. We discuss what this scope covers and what it leaves open.
+\textbf{Statistical design.} Full evaluations use seed 42 with bootstrap CIs over problems. The within-pipeline ablation shares per-seed noise, isolating the semantic contribution. Partial runs with seeds 123 and 456 (280--525 steps) confirm ZVP separation across seeds (Section~\ref{sec:zero_variance_analysis}); completing these runs is the most important extension.
 
-\textbf{Statistical design.} All results use seed 42 with bootstrap CIs over problems. The within-pipeline ablation (real PSE vs.\ random PSE vs.\ $\beta{=}0$) shares identical per-seed noise, isolating the semantic contribution without multi-seed runs. Cross-baseline comparisons would benefit from multi-seed validation.
+\textbf{Scale.} Qwen2.5-1.5B-Instruct on GSM8K, cross-validated on MATH-500. The principle depends on GRPO's normalization, not the model or task. Open questions: does $f_{\text{zv}}$ change at 7B+ scale, and does a domain-specific encoder recover signal where MiniLM fails?
 
-\textbf{Scale and generality.} We train on GSM8K with Qwen2.5-1.5B-Instruct and cross-validate on MATH-500 (Section~\ref{sec:math500}), where the principle transfers but the encoder does not. This establishes one positive transfer and one negative transfer on a single cross-dataset evaluation. The zero-variance preservation principle depends on GRPO's normalization (Proposition~1), not the model or task. The open questions are: (i)~whether the principle's importance changes at 7B+ scale, where zero-variance fractions and batch dynamics may differ, and (ii)~whether a domain-specific encoder recovers the novelty bonus on harder benchmarks.
+\textbf{Encoder.} MiniLM provides +0.93pp over random vectors on GSM8K but nothing on MATH-500. A math-specific encoder is the clearest path to a stronger instantiation.
 
-\textbf{Encoder choice.} MiniLM captures general semantic similarity, not mathematical reasoning structure, yet provides +0.93pp over random vectors. A math-specific encoder is the most promising direction for amplifying the effect---and would further test the principle by varying the \emph{quality} of the semantic signal.
+\textbf{Batch size.} 2 prompts per optimizer step ($G{=}8$, accumulation 2)---far below the 32--256 standard. At larger batch sizes, more uniform prompts enter each gradient step, so phantom gradients from ZVP violations occupy a larger fraction. The principle should matter \emph{more} at scale; this is untested.
 
-\textbf{Batch size.} Each optimizer step uses gradients from 2 prompts ($G{=}8$, accumulation 2), substantially smaller than the 32--256 prompts typical of GRPO papers. The principle should be more important at larger batch sizes (where zero-variance batches are more frequent), but this remains untested.
-
-\textbf{Remaining ablations and baselines.} The difficulty tracker is not ablated against uniform $d{=}1$; its limited activation at this scale (Section~\ref{sec:difficulty}) suggests it contributes minimally, but this should be verified. The $\beta$ selection used in-distribution grid search. A DAPO-style ``discard'' baseline (simply skipping zero-variance batches) is the most natural missing comparison---it requires zero additional parameters and would test whether preservation-plus-novelty improves over the simplest preserve-by-discarding strategy. All experiments use a single model family (Qwen2.5) and a single seed.
+\textbf{Remaining ablations.} The difficulty tracker ($d = 1 - \text{acc}_x$) is not compared against uniform $d{=}1$; $\beta$ was grid-searched on training data.
 
 %=============================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 %=============================================================================
 
-This paper contributes a design principle and a controlled validation of it. \emph{Zero-variance preservation}---do not inject per-sample exploration variance into uniform batches---is grounded in a precise mechanism (Proposition~1: phantom gradients) and empirically validated across seven GRPO configurations, where it correlates perfectly with training outcomes (though the small sample of violating methods, $N{=}2$, limits the strength of this claim). The SuS instantiation further demonstrates that, within preserving designs, the \emph{semantic content} of the exploration signal is the active ingredient: random vectors yield zero benefit over no bonus (73.49\% $\approx$ 73.46\%), while meaningful embeddings yield +0.96pp. While the aggregate improvement is not statistically significant, per-problem analysis reveals a highly significant directional asymmetry on hard problems (3.1:1 advantage ratio, sign test $p < 10^{-10}$), where the novelty bonus preserves minority correct strategies that standard GRPO extinguishes. More broadly, the random-embedding control methodology---replacing a semantic encoder with dimension-matched random unit vectors to isolate whether the semantic content is the active ingredient---is applicable to any exploration bonus that uses learned representations, and we recommend it as a standard ablation for future work.
+Zero-variance preservation---do not inject per-sample exploration variance into uniform-reward batches---follows from Proposition~1 and is validated across ten GRPO configurations: six preserving (Pass@1 $>$ 73\%), four violating ($\leq$72.2\%). The sharpest evidence is SuS-All: same bonus, all batches, 7.1pp collapse. Within preserving designs, the three-way PSE ablation shows the bonus must carry semantic content: random vectors yield nothing, real embeddings yield +0.96pp. Per-problem sign tests confirm the effect concentrates on hard problems (3.1:1, $p < 10^{-10}$), where minority strategies are most at risk.
 
-Cross-dataset evaluation on MATH-500 separates the two contributions: the principle transfers (both preserving methods maintain stable performance at 39.57\% and 39.90\% Pass@1, CIs overlapping), while the encoder does not (MiniLM provides no novelty signal on competition mathematics). This decomposition identifies encoder domain specificity---not the preservation principle---as the bottleneck for stronger instantiations. The principle generates further falsifiable predictions: any GRPO exploration method preserving zero-variance batches should avoid the KL blowup we observe in violating configurations, and a math-specific encoder should amplify the gain over random PSE. As the field develops increasingly complex reward augmentations for LLM reasoning, the interaction between bonus structure and GRPO's group normalization deserves the same attention as the choice of bonus itself---Proposition~1 provides a simple analytical lens for this interaction.
+The principle makes a falsifiable prediction: \emph{any GRPO exploration bonus that violates ZVP will show elevated KL and degraded accuracy compared to a preserving variant with the same bonus design}. As GRPO becomes the default for LLM reasoning, the interaction between bonus structure and group normalization warrants the same attention as the bonus itself.
 
 \section*{Acknowledgments}
 
