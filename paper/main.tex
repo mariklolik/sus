@@ -1,9 +1,5 @@
-% To compile with ICML style: place icml2026.sty in this directory and
-% uncomment the icml2026 line below, then comment out the geometry line.
-\documentclass[10pt,twocolumn]{article}
-% \usepackage{icml2026}
-\usepackage[margin=1in]{geometry}
-
+\documentclass[10pt]{article}
+\usepackage{icml2026}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{mathtools}
@@ -16,23 +12,33 @@
 \usepackage{natbib}
 \usepackage{xcolor}
 \usepackage{enumitem}
-\usepackage{times}
 \usepackage{microtype}
 \usepackage{amsthm}
 \newtheorem{proposition}{Proposition}
 
+\icmltitlerunning{Zero-Variance Preservation for GRPO Exploration}
+
 \begin{document}
 
-\title{Zero-Variance Preservation: A Design Principle\\for Exploration Rewards in GRPO}
-\author{
-Mark Kashirskiy$^{1,2}$ \quad Ilya Makarov$^{1}$ \\[0.5em]
-$^1$HSE University, Moscow, Russia \\
-$^2$AI Talent Hub, ITMO University, Saint Petersburg, Russia \\[0.3em]
-\texttt{353056@niuitmo.ru \quad iamakarov@hse.ru}
-}
-\date{}
+\twocolumn[
+\icmltitle{Zero-Variance Preservation: A Design Principle\\for Exploration Rewards in GRPO}
 
-\maketitle
+\begin{icmlauthorlist}
+\icmlauthor{Mark Kashirskiy}{hse,itmo}
+\icmlauthor{Ilya Makarov}{hse}
+\end{icmlauthorlist}
+
+\icmlaffiliation{hse}{HSE University, Moscow, Russia}
+\icmlaffiliation{itmo}{AI Talent Hub, ITMO University, Saint Petersburg, Russia}
+
+\icmlcorrespondingauthor{Mark Kashirskiy}{353056@niuitmo.ru}
+
+\icmlkeywords{Reinforcement Learning, Language Models, GRPO, Exploration}
+
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
 
 \begin{abstract}
 GRPO's group normalization zeroes out advantages for batches where all responses share the same reward---a built-in stability mechanism. Any per-sample exploration bonus with nonzero variance defeats this mechanism, producing \emph{phantom gradients} driven entirely by the bonus (Proposition~1). We call the resulting constraint \emph{zero-variance preservation} (ZVP). Across ten GRPO configurations on GSM8K with Qwen2.5-1.5B-Instruct, ZVP separates all six preserving configurations (Pass@1 ${>}$\,73\%) from all four violating ones ($-$1.75pp to $-$12.6pp). We instantiate the principle as Strategy-aware Surprise (SuS), which confines a semantic novelty bonus to correct responses in mixed-correctness batches. A three-way ablation---real sentence embeddings vs.\ random unit vectors vs.\ no bonus---shows that the gain requires per-sample semantic differentiation: random vectors yield zero benefit (+0.96pp, paired bootstrap $p{=}0.025$). Per-problem sign tests reveal a 3.1:1 advantage ratio on hard problems ($p < 10^{-10}$), and multi-seed partial training confirms the ZVP separation across three seeds. The principle is the main contribution; SuS is one instantiation.
@@ -261,12 +267,12 @@ Random PSE: 73.49\% [71.67, 75.29], indistinguishable from $\beta{=}0.0$ (73.46\
 \subsection{Training Dynamics}
 \label{sec:training_dynamics}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\linewidth]{figures/training_dynamics.pdf}
+\includegraphics[width=0.95\textwidth]{figures/training_dynamics.pdf}
 \caption{Training curves over 2000 steps. Random PSE (dashed) overlaps real PSE on all metrics---the embedding content affects evaluation accuracy, not training stability. Entropy Bonus diverges within 500 steps.}
 \label{fig:dynamics}
-\end{figure}
+\end{figure*}
 
 Figure~\ref{fig:dynamics}: SuS and baseline follow similar KL trajectories (0.061 vs.\ 0.071 at step 2000). Random PSE overlaps real PSE on all four metrics throughout training: the embedding content steers the bonus direction but not the training dynamics. The 0.93pp evaluation gap (Table~\ref{tab:ablation_pse}) is therefore attributable to the quality of the exploration signal, not its effect on optimization.
 
