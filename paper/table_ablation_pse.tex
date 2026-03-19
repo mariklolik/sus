@@ -1,15 +1,17 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Random-PSE ablation: replacing MiniLM embeddings with random 384-d unit vectors at $\beta{=}0.1$. Training dynamics (averaged over steps 1800--2000) are near-identical, but the semantic PSE accounts for the entire Pass@1 gain. Random PSE is statistically indistinguishable from $\beta{=}0.0$ (no bonus).}
+\caption{Random-PSE ablation: replacing MiniLM with random 384-d unit vectors at $\beta{=}0.1$. Training dynamics are near-identical, but the semantic PSE accounts for the entire Pass@1 gain.}
 \label{tab:ablation_pse}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lccccccc@{}}
 \toprule
-PSE variant & $\beta$ & KL & Length & $f_{\text{zv}}$ & Pass@1 & Pass@5 & Pass@8 \\
+PSE variant & $\beta$ & KL & Len & $f_{\text{zv}}$ & Pass@1 & Pass@5 & Pass@8 \\
 \midrule
 \textbf{MiniLM (real)} & \textbf{0.1} & 0.061 & 268 & 0.67 & \textbf{74.42} & \textbf{90.36} & \textbf{92.74} \\
 Random vectors & 0.1 & 0.049 & 270 & 0.66 & 73.49 & 89.56 & 92.09 \\
 None (no bonus) & 0.0 & 0.064 & 277 & 0.65 & 73.46 & 90.07 & 92.57 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
