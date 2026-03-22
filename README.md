@@ -2,7 +2,7 @@
 
 Official implementation for the paper **"SuS: Strategy-aware Surprise for Intrinsic Exploration in GRPO"**.
 
-[[Paper]](https://arxiv.org/abs/2601.10349) [[Code]](https://github.com/mariklolik/sus) [[Models]](https://huggingface.co/mariklolik228/sus-qwen2.5-1.5b-grpo-lora) [[Training Logs]](https://wandb.ai/mariklolikteam/sus-grpo)
+[[Paper]](https://arxiv.org/abs/2601.10349) [[Code]](https://github.com/mariklolik/sus) [[Models]](https://huggingface.co/mariklolik228/sus-qwen2.5-1.5b-grpo-lora) [[Training Logs]](https://wandb.ai/mariklolikteam/sus-paper)
 
 ## Overview
 
