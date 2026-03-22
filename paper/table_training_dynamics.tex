@@ -13,11 +13,12 @@ Method & KL & Len & $f_{\text{zv}}$ & Pass@1 & Violation \\
 GRPO Baseline & 0.071 & 237 & 0.65 & 73.98 & --- \\
 RS-GRPO & 0.084 & 277 & 0.63 & 73.57 & --- \\
 Random PSE & 0.049 & 270 & 0.66 & 73.49 & --- \\
+SuS $\beta{=}0.2$ & 0.057 & 287 & 0.65 & 73.11 & --- \\
 SuS $\beta{=}0.0$ & 0.064 & 277 & 0.65 & 73.46 & --- \\
 \midrule
 \multicolumn{6}{l}{\textit{Zero-variance violating ($f_{\text{zv}} \leq 0.31$):}} \\
 ProGRPO-ARM$^\dagger$ & 0.057 & 251 & 0.01 & 72.23 & per-sample EMA \\
-SuS-All (v1) & 0.504 & 110 & 0.01 & 67.30 & bonus on all \\
+SuS-All & 0.504 & 110 & 0.01 & 67.30 & bonus on all \\
 SS-Only & 0.260 & 125 & 0.00 & 67.99 & no gating \\
 Entropy Bonus & 0.492 & 83 & 0.31 & 61.37 & entropy on all \\
 \bottomrule

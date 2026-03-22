@@ -1,11 +1,11 @@
 \begin{table}[t]
 \centering
 \small
-\caption{Ablation over novelty bonus strength $\beta$ and error bonus. All variants use the SuS reward structure with zero-variance preservation; $\beta{=}0$ reduces to pure GRPO within the SuS framework. Best configuration in bold. $^\dagger$Evaluated from checkpoint at step 1500 due to training timeout; also changes both $\beta$ and err\_bonus relative to the $\beta{=}0.2$ row, so the effect of $\beta$ alone is not isolated.}
+\caption{Ablation over novelty coefficient $\beta$ and error bonus $\epsilon_{\text{err}}$. All variants use SuS with zero-variance preservation; $\beta{=}0$ reduces to pure GRPO. $^\dagger$Step 1500 checkpoint (timeout).}
 \label{tab:ablation}
-\begin{tabular}{@{}ccccc@{}}
+\begin{tabular}{@{}cc ccc@{}}
 \toprule
-$\beta$ & err\_bonus & Pass@1 & Pass@5 & Pass@8 \\
+$\beta$ & $\epsilon_{\text{err}}$ & Pass@1 & Pass@5 & Pass@8 \\
 \midrule
 0.0 & 0.0 & 73.46 & 90.07 & 92.57 \\
 \textbf{0.1} & \textbf{0.0} & \textbf{74.42} & \textbf{90.36} & \textbf{92.74} \\

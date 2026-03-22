@@ -1,6 +1,6 @@
-# SuS: Strategy-aware Surprise for Intrinsic Exploration
+# SuS: Strategy-aware Surprise for Intrinsic Exploration in GRPO
 
-Official implementation for the paper **"SuS: Strategy-aware Surprise for Intrinsic Exploration"**.
+Official implementation for the paper **"SuS: Strategy-aware Surprise for Intrinsic Exploration in GRPO"**.
 
 [[Paper]](https://arxiv.org/abs/2601.10349) [[Code]](https://github.com/mariklolik/sus) [[Models]](https://huggingface.co/mariklolik228/sus-qwen2.5-1.5b-grpo-lora) [[Training Logs]](https://wandb.ai/mariklolikteam/sus-grpo)
 
@@ -69,8 +69,8 @@ GSM8K test set (1319 problems), Qwen2.5-1.5B-Instruct + LoRA, 2000 GRPO steps, 1
 |--------|--------|--------|--------|-----------------|
 | **SuS (Ours, $\beta$=0.1)** | **74.42** | **90.36** | **92.74** | **[72.65, 76.22]** |
 | GRPO Baseline | 73.98 | 89.53 | 91.88 | [72.10, 75.83] |
-| RS-GRPO [(Li et al., 2025)](https://arxiv.org/abs/2509.24261) | 73.57 | 90.12 | 92.72 | [71.78, 75.36] |
-| ProGRPO [(Zhao et al., 2025)](https://arxiv.org/abs/2602.05281) | 72.23 | 89.49 | 92.24 | [70.38, 74.04] |
+| RS-GRPO [(Yu et al., 2025)](https://arxiv.org/abs/2509.24261) | 73.57 | 90.12 | 92.72 | [71.78, 75.36] |
+| ProGRPO [(Cui et al., 2026)](https://arxiv.org/abs/2602.05281) | 72.23 | 89.49 | 92.24 | [70.38, 74.04] |
 | Entropy Bonus (EDGE-GRPO) | 61.37 | 81.80 | 85.71 | [59.29, 63.49] |
 
 ### Ablation: SS bonus coefficient $\beta$
@@ -122,7 +122,7 @@ sus/
 
 ```bibtex
 @article{kashirskiy2026sus,
-  title={SuS: Strategy-aware Surprise for Intrinsic Exploration},
+  title={SuS: Strategy-aware Surprise for Intrinsic Exploration in GRPO},
   author={Kashirskiy, Mark and Makarov, Ilya},
   journal={arXiv preprint arXiv:2601.10349},
   year={2026}
